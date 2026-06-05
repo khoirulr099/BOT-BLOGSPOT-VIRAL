@@ -16,7 +16,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
-const parser = new Parser();
+
+// FIX: Konfigurasi Parser membawa identitas Browser Premium agar tidak diblokir server Detik (Anti-ECONNRESET)
+const parser = new Parser({
+  headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
+});
 
 // Memastikan file database lokal tersedia otomatis
 if (!fs.existsSync(PROFILES_FILE)) {
@@ -59,11 +63,12 @@ const daftarTopik = [
 
 // FITUR: Multi-Source AI Trend Scraper (Game, Tech, & Viral Topic)
 async function fetchLatestTrend(bahasa) {
+  // FIX: Mengganti feed Cointelegraph yang mati dengan CNBC Indonesia Tech yang super stabil
   const targetFeeds = {
     Indonesia: [
+      "https://www.cnbcindonesia.com/tech/rss",          // CNBC Indonesia Tech
       "https://rss.detik.com/index.php/inet",             // Detikinet (Game & Tech Terpanas Indo)
-      "https://www.antaranews.com/rss/tekno.xml",        // Antara Tekno (AI & Gadget)
-      "https://id.cointelegraph.com/rss"                 // Crypto Lokal
+      "https://www.antaranews.com/rss/tekno.xml"         // Antara Tekno
     ],
     English: [
       "https://feeds.feedburner.com/ign/news",           // IGN News (Pusat Berita Game Dunia)
@@ -101,7 +106,7 @@ async function buatDanPostArtikelOtomatis() {
   const topikFallback = daftarTopik[Math.floor(Math.random() * daftarTopik.length)];
   
   try {
-    botState.logTerakhir = "🤖 Mencari berita viral terbaru untuk bahasa: " + bahasa;
+    botState.logTerakhir = "🤖 Mencari berita berita terbaru untuk bahasa: " + bahasa;
     
     const trendBerita = await fetchLatestTrend(bahasa);
     
@@ -190,9 +195,13 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     const responsTeks = dataText.choices[0].message.content.trim();
 
-    const bagianJudul = responsTeks.match(/(?:\[JUDUL\]|JUDUL:?)([\s\S]*?)(?:\[DESKRIPSI\]|DESKRIPSI:?)/i);
-const bagianDeskripsi = responsTeks.match(/(?:\[DESKRIPSI\]|DESKRIPSI:?)([\s\S]*?)(?:\[KONTEN\]|KONTEN:?)/i);
-const bagianKonten = responsTeks.match(/(?:\[KONTEN\]|KONTEN:?)([\s\S]*)/i);
+    // FIX: Regex Pintar Anti-Typo AI (Mengabaikan huruf besar/kecil, tanda titik dua, dan bintang markdown)
+    const responsBersih = responsTeks.replace(/\*\*/g, ""); 
+    
+    const bagianJudul = responsBersih.match(/(?:\[?JUDUL\]?:?)([\s\S]*?)(?:\[?DESKRIPSI\]?:?)/i);
+    const bagianDeskripsi = responsBersih.match(/(?:\[?DESKRIPSI\]?:?)([\s\S]*?)(?:\[?KONTEN\]?:?)/i);
+    const bagianKonten = responsBersih.match(/(?:\[?KONTEN\]?:?)([\s\S]*)/i);
+
     if (!bagianJudul || !bagianDeskripsi || !bagianKonten) {
       throw new Error("Pola balasan model teks tidak valid.");
     }
@@ -255,6 +264,7 @@ const bagianKonten = responsTeks.match(/(?:\[KONTEN\]|KONTEN:?)([\s\S]*)/i);
 // ROUTING API CONTROL CENTER & BRANKAS PROFIL
 // ==========================================
 
+// FIX: Baris 271 dan sekitarnya sudah dipastikan utuh tanpa potongan string
 app.get("/api/status", (req, res) => {
   const diffMs = Date.now() - startTime;
   const hrs = Math.floor(diffMs / 3600000);
