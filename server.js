@@ -189,22 +189,30 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     const responsTeks = dataText.choices[0].message.content.trim();
 
-    const responsBersih = responsTeks.replace(/\*\*/g, ""); 
-    
-    const bagianJudul = responsBersih.match(/(?:\[?JUDUL\]?:?)([\s\S]*?)(?:\[?DESKRIPSI\]?:?)/i);
-    const bagianDeskripsi = responsBersih.match(/(?:\[?DESKRIPSI\]?:?)([\s\S]*?)(?:\[?KONTEN\]?:?)/i);
-    const bagianKonten = responsBersih.match(/(?:\[?KONTEN\]?:?)([\s\S]*)/i);
+    // FIX LOGIKA PARSER: Menghapus markdown dan membersihkan teks secara menyeluruh
+    const teksBersih = responsTeks.replace(/```html/gi, "").replace(/```/g, "").replace(/\*\*/g, "").trim();
 
-    if (!bagianJudul || !bagianDeskripsi || !bagianKonten) {
-      throw new Error("Pola balasan model teks tidak valid.");
+    // FUNGSI BARU MUTAKHIR: Mengekstrak bagian tanpa bergantung pada urutan letak tag (Anti-Acak AI)
+    function ekstrakBagianIndependent(teks, kataKunci) {
+      const regex = new RegExp(`(?:\\[?${kataKunci}\\]?:?)\\s*([\\s\\S]*?)(?=\\[?(?:JUDUL|DESKRIPSI|KONTEN)\\]?:?|$)`, "i");
+      const match = teks.match(regex);
+      return match ? match[1].trim() : "";
     }
 
-    const tigaPetik = String.fromCharCode(96, 96, 96);
-    const judulFinal = bagianJudul[1].split(tigaPetik).join("").split("html").join("").trim();
-    const deskripsiPenelusuran = bagianDeskripsi[1].trim();
-    const kontenHTMLRaw = bagianKonten[1].split(tigaPetik).join("").split("html").join("").trim();
+    let judulFinal = ekstrakBagianIndependent(teksBersih, "JUDUL");
+    let deskripsiPenelusuran = ekstrakBagianIndependent(teksBersih, "DESKRIPSI");
+    let kontenHTMLRaw = ekstrakBagianIndependent(teksBersih, "KONTEN");
 
-    // FIX GAMBAR POLOS: Pure tag img diletakkan paling atas tanpa pembungkus tag tautan jangkar (<a>) sesuai request
+    // SUPER FALLBACK: Jika AI benar-benar mogok atau melupakan tag, potong otomatis secara darurat (Bot Anti-Mogok)
+    if (!judulFinal || !kontenHTMLRaw) {
+      console.log("⚠️ Parser utama meleset, mengaktifkan sistem Autopilot Fallback...");
+      const barisTeks = teksBersih.split("\n").filter(b => b.trim() !== "");
+      judulFinal = barisTeks[0] ? barisTeks[0].replace(/\[?JUDUL\]?/i, "").trim() : (judulBeritaAsli || "Artikel Tren Viral Terbaru");
+      deskripsiPenelusuran = barisTeks[1] ? barisTeks[1].replace(/\[?DESKRIPSI\]?/i, "").slice(0, 140).trim() : judulFinal;
+      kontenHTMLRaw = teksBersih.replace(/\[?JUDUL\]?/i, "").replace(/\[?DESKRIPSI\]?/i, "").replace(/\[?KONTEN\]?/i, "").trim();
+    }
+
+    // Gambar polos diletakkan paling atas murni tanpa dibungkus link <a> sesuai request kamu
     const bannerHTML = `<img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; max-width: 800px; height: auto; border-radius: 12px; display: block; margin: 0 auto 25px auto;" /><br/>`;
 
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
