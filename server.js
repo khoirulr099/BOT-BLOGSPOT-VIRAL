@@ -17,12 +17,11 @@ const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
 
-// FIX: Konfigurasi Parser membawa identitas Browser Premium agar tidak diblokir server Detik (Anti-ECONNRESET)
+// Konfigurasi Parser membawa identitas Browser Premium agar tidak diblokir server (Anti-ECONNRESET)
 const parser = new Parser({
   headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36' }
 });
 
-// Memastikan file database lokal tersedia otomatis
 if (!fs.existsSync(PROFILES_FILE)) {
   fs.writeFileSync(PROFILES_FILE, JSON.stringify([], null, 2));
 }
@@ -30,7 +29,6 @@ if (!fs.existsSync(HISTORY_FILE)) {
   fs.writeFileSync(HISTORY_FILE, JSON.stringify([], null, 2));
 }
 
-// State manajemen internal server & dashboard
 let botState = {
   isRunning: false,
   engineStatus: "CORE IDLE (Standby)",
@@ -51,46 +49,46 @@ let botState = {
 };
 
 let botIntervalObject = null;
-const JEDA_WAKTU = 6 * 60 * 60 * 1000; // 6 Jam interval loop
+const JEDA_WAKTU = 6 * 60 * 60 * 1000; 
 const jadwalHarian = ["Indonesia", "English", "Indonesia", "English"];
 
-// Bank Topik Cadangan (Hanya aktif jika semua portal RSS berita di bawah terputus/down)
 const daftarTopik = [
-  { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800", deskripsi: "Tren game open-world RPG terbaru PC/Konsol.", keywordsID: "game terbaru, open world RPG", keywordsEN: "latest games, open world RPG" },
-  { kategori: "AI", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=800", deskripsi: "Rekomendasi platform AI tools gratis terbaik.", keywordsID: "AI tools gratis, platform AI", keywordsEN: "free AI tools, best AI" },
-  { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800", deskripsi: "Panduan aman berburu crypto airdrop farming.", keywordsID: "crypto terbaru, airdrop farming", keywordsEN: "latest crypto, airdrop farming" }
+  { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800", deskripsi: "Tren game open-world RPG terbaru PC/Konsol." },
+  { kategori: "Tech", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800", deskripsi: "Rekomendasi platform AI tools gratis terbaik dunia." },
+  { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800", deskripsi: "Panduan aman berburu crypto airdrop farming." }
 ];
 
-// FITUR: Multi-Source AI Trend Scraper (Game, Tech, & Viral Topic)
+// REFACTOR: Scraper mengembalikan kategori data secara akurat agar gambar selalu sinkron
 async function fetchLatestTrend(bahasa) {
-  // FIX: Mengganti feed Cointelegraph yang mati dengan CNBC Indonesia Tech yang super stabil
   const targetFeeds = {
     Indonesia: [
-      "https://www.cnbcindonesia.com/tech/rss",          // CNBC Indonesia Tech
-      "https://rss.detik.com/index.php/inet",             // Detikinet (Game & Tech Terpanas Indo)
-      "https://www.antaranews.com/rss/tekno.xml"         // Antara Tekno
+      { url: "https://www.cnbcindonesia.com/tech/rss", kategori: "Tech", label: "Software" },
+      { url: "https://rss.detik.com/index.php/inet", kategori: "Game", label: "Game" },
+      { url: "https://www.antaranews.com/rss/tekno.xml", kategori: "Tech", label: "Software" }
     ],
     English: [
-      "https://feeds.feedburner.com/ign/news",           // IGN News (Pusat Berita Game Dunia)
-      "https://www.theverge.com/rss/index.xml",          // The Verge (Gadget, AI, & Pop Culture)
-      "https://techcrunch.com/feed/",                    // TechCrunch (Tech Global)
-      "https://www.coindesk.com/arc/outboundfeeds/rss/"  // Crypto Global
+      { url: "https://feeds.feedburner.com/ign/news", kategori: "Game", label: "Game" },
+      { url: "https://www.theverge.com/rss/index.xml", kategori: "Tech", label: "Software" },
+      { url: "https://techcrunch.com/feed/", kategori: "Tech", label: "Software" },
+      { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", kategori: "Crypto", label: "Lainnya" }
     ]
   };
 
   try {
-    const listUrl = targetFeeds[bahasa] || targetFeeds["English"];
-    const selectedUrl = listUrl[Math.floor(Math.random() * listUrl.length)];
+    const listFeeds = targetFeeds[bahasa] || targetFeeds["English"];
+    const selectedFeed = listFeeds[Math.floor(Math.random() * listFeeds.length)];
     
-    console.log(`📡 Menghubungkan ke portal: ${selectedUrl}`);
-    const feed = await parser.parseURL(selectedUrl);
+    console.log(`📡 Menghubungkan ke portal: ${selectedFeed.url}`);
+    const feed = await parser.parseURL(selectedFeed.url);
     
     if (feed.items && feed.items.length > 0) {
       const beritaTerbaru = feed.items[0];
       return {
         title: beritaTerbaru.title,
         summary: beritaTerbaru.contentSnippet || beritaTerbaru.content || "Info tren terkini.",
-        source: feed.title || "Portal Berita Terpercaya"
+        source: feed.title || "Portal Berita Terpercaya",
+        kategori: selectedFeed.kategori,
+        labelBlogger: selectedFeed.label
       };
     }
     return null;
@@ -100,7 +98,6 @@ async function fetchLatestTrend(bahasa) {
   }
 }
 
-// Logika Pembuatan Konten SEO & Gambar Otomatis
 async function buatDanPostArtikelOtomatis() {
   const bahasa = jadwalHarian[botState.indeksJadwal];
   const topikFallback = daftarTopik[Math.floor(Math.random() * daftarTopik.length)];
@@ -112,17 +109,28 @@ async function buatDanPostArtikelOtomatis() {
     
     let deskripsiArtikel = topikFallback.deskripsi;
     let judulBeritaAsli = "";
+    let kategoriFinal = topikFallback.kategori;
+    let labelBloggerFinal = topikFallback.labelBlogger;
     
     if (trendBerita) {
       botState.logTerakhir = `📰 Berita ketemu dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Berita hangat tentang: ${trendBerita.title}. Intisari fakta berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
+      kategoriFinal = trendBerita.kategori;
+      labelBloggerFinal = trendBerita.labelBlogger;
     }
 
-    let urlGambarFinal = topikFallback.imageUrl;
+    // FIX 1: Penentuan Gambar default disesuaikan dengan rumpun topik berita asli (Anti-Salah Gambar)
+    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=800"; // Berita Umum
+    if (kategoriFinal === "Game") {
+      urlGambarFinal = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800";
+    } else if (kategoriFinal === "Tech") {
+      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800"; // Gambar luar angkasa/sains/teknologi
+    } else if (kategoriFinal === "Crypto") {
+      urlGambarFinal = "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800";
+    }
 
-    // 1. Jalur Pembuatan Gambar Kustom Lewat AI
-    if (botState.config.apiKey && botState.config.imageModel) {
+    if (botState.config.apiKey && botState.config.imageModel && !botState.config.baseUrl.includes("googleapis.com")) {
       try {
         botState.logTerakhir = "🎨 Memanggil model [" + botState.config.imageModel + "] untuk generate gambar...";
         const resImg = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/images/generations", {
@@ -144,11 +152,10 @@ async function buatDanPostArtikelOtomatis() {
           botState.logTerakhir = "📸 Gambar kustom berhasil digenerate oleh AI!";
         }
       } catch (err) {
-        console.error("Gagal generate gambar kustom, beralih ke gambar default.", err.message);
+        console.error("Gagal generate gambar kustom, beralih ke gambar rumpun topik.", err.message);
       }
     }
 
-    // FITUR: Smart SEO Internal Linking
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     let instruksiInternalLink = "";
     
@@ -162,7 +169,6 @@ async function buatDanPostArtikelOtomatis() {
       ].join("\n");
     }
 
-    // 2. Jalur Teks Artikel dengan Proteksi Ketat Anti-Halusinasi
     const promptSEO = [
       "Kamu adalah praktisi SEO senior dan blogger profesional.",
       "Buat artikel mendalam berdasarkan kabar terbaru berikut: " + deskripsiArtikel,
@@ -195,7 +201,6 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     const responsTeks = dataText.choices[0].message.content.trim();
 
-    // FIX: Regex Pintar Anti-Typo AI (Mengabaikan huruf besar/kecil, tanda titik dua, dan bintang markdown)
     const responsBersih = responsTeks.replace(/\*\*/g, ""); 
     
     const bagianJudul = responsBersih.match(/(?:\[?JUDUL\]?:?)([\s\S]*?)(?:\[?DESKRIPSI\]?:?)/i);
@@ -211,20 +216,15 @@ async function buatDanPostArtikelOtomatis() {
     const deskripsiPenelusuran = bagianDeskripsi[1].trim();
     const kontenHTMLRaw = bagianKonten[1].split(tigaPetik).join("").split("html").join("").trim();
 
-    // Menggabungkan Gambar Sampul dengan CSS Banner Premium
+    // FIX 2: Struktur HTML diubah memakai kelas 'separator' resmi Blogger agar dibaca sempurna sebagai Thumbnail oleh Tema Blog
     const bannerHTML = [
-      "<div style=\"position: relative; width: 100%; max-width: 800px; margin: 0 auto 30px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.3); font-family: sans-serif;\">",
-      "  <img src=\"" + urlGambarFinal + "\" alt=\"" + judulFinal + "\" style=\"width: 100%; height: auto; display: block; max-height: 380px; object-fit: cover; filter: brightness(0.6);\" />",
-      "  <div style=\"position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0)); padding: 25px 20px;\">",
-      "    <span style=\"background: #3b82f6; color: white; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;\">" + topikFallback.kategori + "</span>",
-      "    <h1 style=\"color: white; font-size: 22px; margin: 8px 0 0 0; font-weight: 800;\">" + judulFinal + "</h1>",
-      "  </div>",
-      "</div><br/>"
+      `<div class="separator" style="clear: both; text-align: center; margin-bottom: 25px;">`,
+      `  <img border="0" src="${urlGambarFinal}" alt="${judulFinal}" style="margin-left: auto; margin-right: auto; width: 100%; max-width: 800px; height: auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);" />`,
+      `</div><br/>`
     ].join("\n");
 
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
-    // 3. Pengiriman ke Blogger
     const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
     oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
@@ -234,7 +234,7 @@ async function buatDanPostArtikelOtomatis() {
       requestBody: {
         title: judulFinal,
         content: kontenHTMLFinal,
-        labels: [topikFallback.labelBlogger],
+        labels: [labelBloggerFinal],
         searchDescription: deskripsiPenelusuran
       }
     });
@@ -242,7 +242,6 @@ async function buatDanPostArtikelOtomatis() {
     const postUrl = response.data.url;
     botState.logTerakhir = "🎉 [SUKSES KONTEN] Berhasil tayang di blog! URL: " + postUrl;
 
-    // Simpan data ke history untuk kebutuhan internal linking & grafik dashboard
     riwayatLokal.push({
       id: response.data.id,
       title: judulFinal,
@@ -260,11 +259,6 @@ async function buatDanPostArtikelOtomatis() {
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
 
-// ==========================================
-// ROUTING API CONTROL CENTER & BRANKAS PROFIL
-// ==========================================
-
-// FIX: Baris 271 dan sekitarnya sudah dipastikan utuh tanpa potongan string
 app.get("/api/status", (req, res) => {
   const diffMs = Date.now() - startTime;
   const hrs = Math.floor(diffMs / 3600000);
@@ -278,7 +272,6 @@ app.get("/api/status", (req, res) => {
   });
 });
 
-// FITUR: API Endpoint Penyuplai Data Grafik Dashboard
 app.get("/api/analytics", (req, res) => {
   const historyData = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
   
