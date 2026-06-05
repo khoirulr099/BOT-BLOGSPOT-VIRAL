@@ -6,7 +6,7 @@
 
 ## 🇺🇸 English Version
 
-A Node.js automation bot to generate and post SEO articles to Blogger (Blogspot) using the Gemini API (via OpenAI compatibility layer). Inspired by Bang Airplane's original idea and built with the help of Gemini AI.
+A Node.js automation bot to generate and post SEO articles to Blogger (Blogspot) using the Gemini API (via OpenAI compatibility layer).
 
 The bot automatically creates articles in Indonesian and English alternately every 6 hours, generates a custom cover image using AI, and includes a local web dashboard to manage everything easily.
 
@@ -72,7 +72,7 @@ Open your browser and go to: `http://localhost:3000`
 
 ## 🇮🇩 Versi Bahasa Indonesia
 
-Bot otomatisasi berbasis Node.js untuk membuat dan memposting artikel SEO secara otomatis ke platform Blogger (Blogspot). Konsep awal proyek ini terinspirasi dari postingan **Bang Airplane**, lalu dikembangkan sendiri dengan bantuan Gemini AI sebagai asisten koding.
+Bot otomatisasi berbasis Node.js untuk membuat dan memposting artikel SEO secara otomatis ke platform Blogger (Blogspot). 
 
 Bot ini bakal memproduksi konten Bahasa Indonesia dan Inggris secara bergantian setiap 6 jam sekali, membuat gambar cover otomatis pakai AI, dan punya web dashboard lokal sendiri buat kontrol utamanya.
 
