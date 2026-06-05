@@ -58,7 +58,7 @@ const daftarTopik = [
   { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800", deskripsi: "Panduan aman berburu crypto airdrop farming." }
 ];
 
-// REFACTOR: Scraper mengembalikan kategori data secara akurat agar gambar selalu sinkron
+// Scraper mengembalikan kategori data secara akurat agar gambar selalu sinkron
 async function fetchLatestTrend(bahasa) {
   const targetFeeds = {
     Indonesia: [
@@ -120,12 +120,12 @@ async function buatDanPostArtikelOtomatis() {
       labelBloggerFinal = trendBerita.labelBlogger;
     }
 
-    // FIX 1: Penentuan Gambar default disesuaikan dengan rumpun topik berita asli (Anti-Salah Gambar)
-    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=800"; // Berita Umum
+    // Penentuan Gambar default disesuaikan dengan rumpun topik berita asli (Anti-Salah Gambar)
+    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=800"; 
     if (kategoriFinal === "Game") {
       urlGambarFinal = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800";
     } else if (kategoriFinal === "Tech") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800"; // Gambar luar angkasa/sains/teknologi
+      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800"; 
     } else if (kategoriFinal === "Crypto") {
       urlGambarFinal = "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800";
     }
@@ -216,17 +216,19 @@ async function buatDanPostArtikelOtomatis() {
     const deskripsiPenelusuran = bagianDeskripsi[1].trim();
     const kontenHTMLRaw = bagianKonten[1].split(tigaPetik).join("").split("html").join("").trim();
 
-    // FIX 2: Struktur HTML diubah memakai kelas 'separator' resmi Blogger agar dibaca sempurna sebagai Thumbnail oleh Tema Blog
+    // FIX 2: Gambar dibungkus tag <a> dengan properti imageanchor="1" resmi agar langsung dirender jadi thumbnail di Sidebar
     const bannerHTML = [
       `<div class="separator" style="clear: both; text-align: center; margin-bottom: 25px;">`,
-      `  <img border="0" src="${urlGambarFinal}" alt="${judulFinal}" style="margin-left: auto; margin-right: auto; width: 100%; max-width: 800px; height: auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);" />`,
+      `  <a href="${urlGambarFinal}" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">`,
+      `    <img border="0" src="${urlGambarFinal}" alt="${judulFinal}" style="margin-left: auto; margin-right: auto; width: 100%; max-width: 800px; height: auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);" />`,
+      `  </a>`,
       `</div><br/>`
     ].join("\n");
 
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
     const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
-    oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
+    oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN || botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
 
     const response = await blogger.posts.insert({
@@ -258,6 +260,10 @@ async function buatDanPostArtikelOtomatis() {
   botState.indeksJadwal = (botState.indeksJadwal + 1) % jadwalHarian.length;
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
+
+// ==========================================
+// ROUTING API CONTROL CENTER & BRANKAS PROFIL
+// ==========================================
 
 app.get("/api/status", (req, res) => {
   const diffMs = Date.now() - startTime;
