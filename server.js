@@ -231,8 +231,11 @@ async function buatDanPostArtikelOtomatis() {
       }
     });
 
+    // --- DI SINI PERUBAHAN FITUR LIVE LOG SUMBER SCRAPE KAMU ---
     const postUrl = response.data.url;
-    botState.logTerakhir = "🎉 [SUKSES KONTEN] Berhasil tayang di blog! URL: " + postUrl;
+    const sumberSitus = trendBerita ? trendBerita.source : "Bank Topik Cadangan";
+    botState.logTerakhir = `🎉 [SUKSES KONTEN] Berhasil tayang (Sumber Scrape: ${sumberSitus})! URL: ${postUrl}`;
+    // -----------------------------------------------------------
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
