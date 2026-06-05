@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-950 text-gray-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blogger Automation OS - Control Center</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="p-6 max-w-6xl mx-auto font-sans">
+
+  <!-- TOP HUB -->
+  <header class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-gray-800 pb-5 mb-8 gap-4">
+    <div>
+      <h1 class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500">Blogger Automation OS</h1>
+      <p class="text-gray-400 text-xs mt-1">Multi-Profile Core & System Telemetry Controller</p>
+    </div>
+    <div class="flex gap-3 bg-gray-900 p-2 rounded-2xl border border-gray-800">
+      <button onclick="triggerEngine('start')" class="bg-emerald-600 hover:bg-emerald-500 px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition cursor-pointer">START CORE</button>
+      <button onclick="triggerEngine('stop')" class="bg-rose-600 hover:bg-rose-500 px-5 py-2.5 rounded-xl text-xs font-bold shadow-md transition cursor-pointer">STOP CORE</button>
+    </div>
+  </header>
+
+  <!-- TELEMETRY PANELS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Engine State</span>
+      <div id="uiEngineStatus" class="text-lg font-black mt-1 text-rose-500">OFFLINE</div>
+    </div>
+    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Active Profile</span>
+      <div id="uiActiveProfile" class="text-lg font-bold mt-1 text-cyan-400 truncate">Default (.env)</div>
+    </div>
+    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800">
+      <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest block">Next Scheduled Post</span>
+      <div id="uiNextPost" class="text-sm font-bold mt-2 text-indigo-300">Unscheduled</div>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <div class="bg-gray-900 p-3 rounded-xl border border-gray-800 text-center">
+        <span class="text-[9px] font-bold text-gray-500 block uppercase">RAM Allocation</span>
+        <span id="uiRam" class="text-xs font-bold text-yellow-400 mt-1 block">0 MB</span>
+      </div>
+      <div class="bg-gray-900 p-3 rounded-xl border border-gray-800 text-center">
+        <span class="text-[9px] font-bold text-gray-500 block uppercase">System Uptime</span>
+        <span id="uiUptime" class="text-[11px] font-bold text-purple-400 mt-1 block">0m</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- WORKSPACE SPLIT -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    
+    <!-- LEFT & CENTER: PROFILES VAULT MANAGER -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <!-- ADD NEW CREDENTIAL PROFILE -->
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <h2 class="text-lg font-bold mb-4 text-gray-200 flex items-center gap-2">🔑 Create New API Vault Profile</h2>
+        <form id="profileForm" onsubmit="createNewProfile(event)" class="space-y-4 text-xs">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Custom Profile Name</label>
+              <input type="text" id="pName" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="Contoh: OpenRouter Premium / Gemini Free">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Universal Base URL</label>
+              <input type="text" id="pBaseUrl" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="https://openrouter.ai/api/v1">
+            </div>
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1 font-semibold">Secret API Key</label>
+            <input type="password" id="pKey" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="sk-or-...">
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Text Model Name (Artikel)</label>
+              <input type="text" id="pTextModel" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="google/gemini-2.5-flash">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Image Model Name (Auto-Image)</label>
+              <input type="text" id="pImgModel" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="black-forest-labs/flux-schnell">
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 p-3 rounded-xl font-bold shadow-md transition cursor-pointer mt-2 text-xs">LOCK PROFILE TO VAULT</button>
+        </form>
+      </div>
+
+      <!-- CREDENTIALS BANK LIST -->
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <h2 class="text-lg font-bold mb-4 text-gray-200">🗃️ Saved Profiles Bank (Click to Hot-Swap)</h2>
+        <div id="profilesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dinamis diisi lewat JavaScript -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: LIVE SYSTEM CONSOLE LOGS -->
+    <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800 flex flex-col h-full">
+      <h2 class="text-lg font-bold mb-4 text-gray-200">📋 Real-time Engine Logs</h2>
+      <div id="terminalLog" class="bg-gray-950 font-mono text-[11px] text-emerald-400 p-4 rounded-xl flex-1 min-h-[400px] max-h-[550px] overflow-y-auto border border-gray-800 whitespace-pre-wrap leading-relaxed">
+        Menghubungkan ke core engine...
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    async function refreshTelemetry() {
+      const res = await fetch("/api/status");
+      const data = await res.json();
+      
+      const statusEl = document.getElementById("uiEngineStatus");
+      statusEl.innerText = data.engineStatus;
+      if (data.isRunning) {
+        statusEl.className = "text-lg font-black mt-1 text-emerald-400 animate-pulse";
+      } else {
+        statusEl.className = "text-lg font-black mt-1 text-rose-500";
+      }
+
+      document.getElementById("uiActiveProfile").innerText = data.activeProfileName;
+      document.getElementById("uiNextPost").innerText = data.nextPostTime;
+      document.getElementById("uiRam").innerText = data.systemMemory;
+      document.getElementById("uiUptime").innerText = data.systemUptime;
+      document.getElementById("terminalLog").innerText = data.logTerakhir;
+    }
+
+    async function loadVaultProfiles() {
+      const res = await fetch("/api/profiles");
+      const profiles = await res.json();
+      const container = document.getElementById("profilesContainer");
+      
+      if(profiles.length === 0) {
+        container.innerHTML = `<div class="text-gray-500 text-xs italic col-span-2">Brankas kosong. Buat profil pertama kamu di atas.</div>`;
+        return;
+      }
+
+      container.innerHTML = profiles.map(p => `
+        <div class="bg-gray-950 p-4 rounded-xl border border-gray-800 flex flex-col justify-between hover:border-gray-700 transition">
+          <div>
+            <div class="font-bold text-sm text-gray-200 truncate">${p.profileName}</div>
+            <div class="text-[10px] text-gray-500 mt-1 truncate">${p.baseUrl}</div>
+            <div class="flex gap-2 mt-2">
+              <span class="bg-gray-900 text-[9px] text-gray-400 px-2 py-0.5 rounded border border-gray-800 truncate">💬 ${p.textModel.split('/').pop()}</span>
+              <span class="bg-gray-900 text-[9px] text-gray-400 px-2 py-0.5 rounded border border-gray-800 truncate">🖼️ ${p.imageModel.split('/').pop()}</span>
+            </div>
+          </div>
+          <button onclick="activateProfile('${p.id}')" class="w-full mt-4 bg-gray-900 hover:bg-cyan-950 border border-gray-800 hover:border-cyan-800 text-[11px] font-bold py-1.5 px-3 rounded-lg text-cyan-400 transition cursor-pointer">ACTIVATE PROFILE</button>
+        </div>
+      `).join('');
+    }
+
+    async function createNewProfile(e) {
+      e.preventDefault();
+      const body = {
+        profileName: document.getElementById("pName").value,
+        baseUrl: document.getElementById("pBaseUrl").value,
+        apiKey: document.getElementById("pKey").value,
+        textModel: document.getElementById("pTextModel").value,
+        imageModel: document.getElementById("pImgModel").value
+      };
+
+      await fetch("/api/profiles", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body)
+      });
+
+      document.getElementById("profileForm").reset();
+      loadVaultProfiles();
+      refreshTelemetry();
+    }
+
+    async function activateProfile(id) {
+      await fetch("/api/profiles/activate", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ id })
+      });
+      refreshTelemetry();
+    }
+
+    async function triggerEngine(action) {
+      await fetch("/api/control", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ action })
+      });
+      refreshTelemetry();
+    }
+
+    // Interval Pemantauan Otomatis (Update Tiap 3 Detik)
+    setInterval(refreshTelemetry, 3000);
+    
+    window.onload = () => {
+      refreshTelemetry();
+      loadVaultProfiles();
+    };
+  </script>
+</body>
+</html>
