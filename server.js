@@ -120,16 +120,10 @@ async function buatDanPostArtikelOtomatis() {
       labelBloggerFinal = trendBerita.labelBlogger;
     }
 
-    // Penentuan Gambar default disesuaikan dengan rumpun topik berita asli (Anti-Salah Gambar)
-    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?auto=format&fit=crop&w=800&q=80"; 
-    if (kategoriFinal === "Game") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80";
-    } else if (kategoriFinal === "Tech") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"; 
-    } else if (kategoriFinal === "Crypto") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80";
-    }
+    // --- LOGIKA GENERATOR GAMBAR AI OTOMATIS (ANTI-REPETITIF) ---
+    let urlGambarFinal = "";
 
+    // Coba jalur utama dulu jika profil kamu mendukung generate gambar kustom
     if (botState.config.apiKey && botState.config.imageModel && !botState.config.baseUrl.includes("googleapis.com")) {
       try {
         botState.logTerakhir = "🎨 Memanggil model [" + botState.config.imageModel + "] untuk generate gambar...";
@@ -149,12 +143,24 @@ async function buatDanPostArtikelOtomatis() {
         const dataImg = await resImg.json();
         if (dataImg.data && dataImg.data[0] && dataImg.data[0].url) {
           urlGambarFinal = dataImg.data[0].url;
-          botState.logTerakhir = "📸 Gambar kustom berhasil digenerate oleh AI!";
+          botState.logTerakhir = "📸 Gambar kustom berhasil digenerate oleh AI utama!";
         }
       } catch (err) {
-        console.error("Gagal generate gambar kustom, beralih ke gambar rumpun topik.", err.message);
+        console.error("Gagal via API profil, dialihkan ke Free AI Engine.", err.message);
       }
     }
+
+    // JALUR SAKTI: Jika pakai OpenRouter, paksa generate pakai Free AI Engine (Pollinations AI) berdasarkan Judul Berita
+    if (!urlGambarFinal) {
+      const perintahGambar = `Cinematic high-tech digital art banner about ${judulBeritaAsli || topikFallback.deskripsi}, 4k resolution, detailed, futuristic and modern style`;
+      const promptAman = encodeURIComponent(perintahGambar);
+      const angkaKunciSeed = Math.floor(Math.random() * 999999);
+      
+      // Gambar diproduksi real-time sesuai topik dan dikunci dengan seed acak agar konstan di blog kamu
+      urlGambarFinal = `https://image.pollinations.ai/prompt/${promptAman}?width=1024&height=768&nologo=true&seed=${angkaKunciSeed}`;
+      botState.logTerakhir = "📸 Gambar artikel berhasil digenerate dinamis via Free AI Generator!";
+    }
+    // -------------------------------------------------------------
 
     // Teks Prompt SEO Bersih tanpa instruksi internal linking / tautan balik
     const promptSEO = [
@@ -231,11 +237,10 @@ async function buatDanPostArtikelOtomatis() {
       }
     });
 
-    // --- DI SINI PERUBAHAN FITUR LIVE LOG SUMBER SCRAPE KAMU ---
+    // FIX LOG DI DASHBOARD: Menampilkan nama situs sumber scrape secara real-time
     const postUrl = response.data.url;
     const sumberSitus = trendBerita ? trendBerita.source : "Bank Topik Cadangan";
     botState.logTerakhir = `🎉 [SUKSES KONTEN] Berhasil tayang (Sumber Scrape: ${sumberSitus})! URL: ${postUrl}`;
-    // -----------------------------------------------------------
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
@@ -254,6 +259,10 @@ async function buatDanPostArtikelOtomatis() {
   botState.indeksJadwal = (botState.indeksJadwal + 1) % jadwalHarian.length;
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
+
+// ==========================================
+// ROUTING API CONTROL CENTER & BRANKAS PROFIL
+// ==========================================
 
 app.get("/api/status", (req, res) => {
   const diffMs = Date.now() - startTime;
