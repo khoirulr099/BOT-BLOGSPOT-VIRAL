@@ -190,10 +190,9 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     const responsTeks = dataText.choices[0].message.content.trim();
 
-    const bagianJudul = responsTeks.match(/\[JUDUL\]([\s\S]*?)\[DESKRIPSI\]/);
-    const bagianDeskripsi = responsTeks.match(/\[DESKRIPSI\]([\s\S]*?)\[KONTEN\]/);
-    const bagianKonten = responsTeks.match(/\[KONTEN\]([\s\S]*)/);
-
+    const bagianJudul = responsTeks.match(/(?:\[JUDUL\]|JUDUL:?)([\s\S]*?)(?:\[DESKRIPSI\]|DESKRIPSI:?)/i);
+const bagianDeskripsi = responsTeks.match(/(?:\[DESKRIPSI\]|DESKRIPSI:?)([\s\S]*?)(?:\[KONTEN\]|KONTEN:?)/i);
+const bagianKonten = responsTeks.match(/(?:\[KONTEN\]|KONTEN:?)([\s\S]*)/i);
     if (!bagianJudul || !bagianDeskripsi || !bagianKonten) {
       throw new Error("Pola balasan model teks tidak valid.");
     }
