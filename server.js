@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import path from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
+import Parser from "rss-parser"; 
 
 dotenv.config();
 
@@ -13,11 +14,16 @@ app.use(express.static("public"));
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROFILES_FILE = path.join(__dirname, "profiles.json");
+const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
+const parser = new Parser();
 
-// Memastikan file penyimpanan profil lokal tersedia otomatis
+// Memastikan file database lokal tersedia otomatis
 if (!fs.existsSync(PROFILES_FILE)) {
   fs.writeFileSync(PROFILES_FILE, JSON.stringify([], null, 2));
+}
+if (!fs.existsSync(HISTORY_FILE)) {
+  fs.writeFileSync(HISTORY_FILE, JSON.stringify([], null, 2));
 }
 
 // State manajemen internal server & dashboard
@@ -44,24 +50,73 @@ let botIntervalObject = null;
 const JEDA_WAKTU = 6 * 60 * 60 * 1000; // 6 Jam interval loop
 const jadwalHarian = ["Indonesia", "English", "Indonesia", "English"];
 
-// Bank Topik Berdasarkan Tag Kategori Asli Blog Kamu
+// Bank Topik Cadangan (Hanya aktif jika semua portal RSS berita di bawah terputus/down)
 const daftarTopik = [
   { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=800", deskripsi: "Tren game open-world RPG terbaru PC/Konsol.", keywordsID: "game terbaru, open world RPG", keywordsEN: "latest games, open world RPG" },
   { kategori: "AI", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=800", deskripsi: "Rekomendasi platform AI tools gratis terbaik.", keywordsID: "AI tools gratis, platform AI", keywordsEN: "free AI tools, best AI" },
   { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800", deskripsi: "Panduan aman berburu crypto airdrop farming.", keywordsID: "crypto terbaru, airdrop farming", keywordsEN: "latest crypto, airdrop farming" }
 ];
 
+// FITUR: Multi-Source AI Trend Scraper (Game, Tech, & Viral Topic)
+async function fetchLatestTrend(bahasa) {
+  const targetFeeds = {
+    Indonesia: [
+      "https://rss.detik.com/index.php/inet",             // Detikinet (Game & Tech Terpanas Indo)
+      "https://www.antaranews.com/rss/tekno.xml",        // Antara Tekno (AI & Gadget)
+      "https://id.cointelegraph.com/rss"                 // Crypto Lokal
+    ],
+    English: [
+      "https://feeds.feedburner.com/ign/news",           // IGN News (Pusat Berita Game Dunia)
+      "https://www.theverge.com/rss/index.xml",          // The Verge (Gadget, AI, & Pop Culture)
+      "https://techcrunch.com/feed/",                    // TechCrunch (Tech Global)
+      "https://www.coindesk.com/arc/outboundfeeds/rss/"  // Crypto Global
+    ]
+  };
+
+  try {
+    const listUrl = targetFeeds[bahasa] || targetFeeds["English"];
+    const selectedUrl = listUrl[Math.floor(Math.random() * listUrl.length)];
+    
+    console.log(`📡 Menghubungkan ke portal: ${selectedUrl}`);
+    const feed = await parser.parseURL(selectedUrl);
+    
+    if (feed.items && feed.items.length > 0) {
+      const beritaTerbaru = feed.items[0];
+      return {
+        title: beritaTerbaru.title,
+        summary: beritaTerbaru.contentSnippet || beritaTerbaru.content || "Info tren terkini.",
+        source: feed.title || "Portal Berita Terpercaya"
+      };
+    }
+    return null;
+  } catch (error) {
+    console.error("Gagal nge-scrape berita tren, beralih ke bank topik:", error.message);
+    return null;
+  }
+}
+
 // Logika Pembuatan Konten SEO & Gambar Otomatis
 async function buatDanPostArtikelOtomatis() {
   const bahasa = jadwalHarian[botState.indeksJadwal];
-  const topik = daftarTopik[Math.floor(Math.random() * daftarTopik.length)];
-  const keywords = bahasa === "Indonesia" ? topik.keywordsID : topik.keywordsEN;
+  const topikFallback = daftarTopik[Math.floor(Math.random() * daftarTopik.length)];
   
   try {
-    botState.logTerakhir = "🤖 Memproses postingan otomatis untuk bahasa: " + bahasa;
-    let urlGambarFinal = topik.imageUrl;
+    botState.logTerakhir = "🤖 Mencari berita viral terbaru untuk bahasa: " + bahasa;
+    
+    const trendBerita = await fetchLatestTrend(bahasa);
+    
+    let deskripsiArtikel = topikFallback.deskripsi;
+    let judulBeritaAsli = "";
+    
+    if (trendBerita) {
+      botState.logTerakhir = `📰 Berita ketemu dari [${trendBerita.source}]: ${trendBerita.title}`;
+      deskripsiArtikel = `Berita hangat tentang: ${trendBerita.title}. Intisari fakta berita: ${trendBerita.summary}`;
+      judulBeritaAsli = trendBerita.title;
+    }
 
-    // 1. Jalur Pembuatan Gambar Kustom Lewat AI Model Pilihan
+    let urlGambarFinal = topikFallback.imageUrl;
+
+    // 1. Jalur Pembuatan Gambar Kustom Lewat AI
     if (botState.config.apiKey && botState.config.imageModel) {
       try {
         botState.logTerakhir = "🎨 Memanggil model [" + botState.config.imageModel + "] untuk generate gambar...";
@@ -73,7 +128,7 @@ async function buatDanPostArtikelOtomatis() {
           },
           body: JSON.stringify({
             model: botState.config.imageModel,
-            prompt: "Cinematic high-tech digital art banner about " + topik.deskripsi + ", 4k resolution, clean sharp style",
+            prompt: "Cinematic high-tech digital art banner about " + (judulBeritaAsli || topikFallback.deskripsi) + ", 4k resolution, clean sharp style",
             n: 1,
             size: "1024x1024"
           })
@@ -88,12 +143,26 @@ async function buatDanPostArtikelOtomatis() {
       }
     }
 
+    // FITUR: Smart SEO Internal Linking
+    const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+    let instruksiInternalLink = "";
+    
+    if (riwayatLokal.length > 0) {
+      const tautanTersedia = riwayatLokal.slice(-3).map(art => `- Judul: "${art.title}" -> URL Link: ${art.url}`).join("\n");
+      instruksiInternalLink = [
+        "\n🔗 STRATEGI SMART SEO INTERNAL LINKING:",
+        "Kamu diwajibkan menyisipkan minimal 1 atau maksimal 2 link dari daftar artikel lama kami di bawah ini secara natural ke dalam kata atau frasa yang relevan di dalam paragraf artikel baru (Gunakan tag murni <a href='URL'>teks frasa</a>):",
+        tautanTersedia,
+        "Pastikan penempatannya mengalir alami dan tidak dipaksakan."
+      ].join("\n");
+    }
+
     // 2. Jalur Teks Artikel dengan Proteksi Ketat Anti-Halusinasi
     const promptSEO = [
-      "Kamu adalah praktisi SEO senior dan blogger teknologi profesional.",
-      "Buat artikel tentang: " + topik.deskripsi,
+      "Kamu adalah praktisi SEO senior dan blogger profesional.",
+      "Buat artikel mendalam berdasarkan kabar terbaru berikut: " + deskripsiArtikel,
       "Wajib ditulis penuh dalam bahasa: " + bahasa,
-      "Gunakan target keyword ini secara natural di dalam paragraf: " + keywords,
+      instruksiInternalLink,
       "",
       "FORMAT OUTPUT WAJIB (PISAHKAN JELAS DENGAN ENTER):",
       "[JUDUL] Tulis judul artikel saja tanpa tag HTML.",
@@ -139,7 +208,7 @@ async function buatDanPostArtikelOtomatis() {
       "<div style=\"position: relative; width: 100%; max-width: 800px; margin: 0 auto 30px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.3); font-family: sans-serif;\">",
       "  <img src=\"" + urlGambarFinal + "\" alt=\"" + judulFinal + "\" style=\"width: 100%; height: auto; display: block; max-height: 380px; object-fit: cover; filter: brightness(0.6);\" />",
       "  <div style=\"position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0)); padding: 25px 20px;\">",
-      "    <span style=\"background: #3b82f6; color: white; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;\">" + topik.kategori + "</span>",
+      "    <span style=\"background: #3b82f6; color: white; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: bold;\">" + topikFallback.kategori + "</span>",
       "    <h1 style=\"color: white; font-size: 22px; margin: 8px 0 0 0; font-weight: 800;\">" + judulFinal + "</h1>",
       "  </div>",
       "</div><br/>"
@@ -147,7 +216,7 @@ async function buatDanPostArtikelOtomatis() {
 
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
-    // 3. Pengiriman Menggunakan Kredensial Blogger Utama
+    // 3. Pengiriman ke Blogger
     const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
     oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
@@ -157,12 +226,23 @@ async function buatDanPostArtikelOtomatis() {
       requestBody: {
         title: judulFinal,
         content: kontenHTMLFinal,
-        labels: [topik.labelBlogger],
+        labels: [topikFallback.labelBlogger],
         searchDescription: deskripsiPenelusuran
       }
     });
 
-    botState.logTerakhir = "🎉 [SUKSES KONTEN] Berhasil tayang di blog! URL: " + response.data.url;
+    const postUrl = response.data.url;
+    botState.logTerakhir = "🎉 [SUKSES KONTEN] Berhasil tayang di blog! URL: " + postUrl;
+
+    // Simpan data ke history untuk kebutuhan internal linking & grafik dashboard
+    riwayatLokal.push({
+      id: response.data.id,
+      title: judulFinal,
+      url: postUrl,
+      date: new Date().toLocaleDateString("id-ID"),
+      lang: bahasa
+    });
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(riwayatLokal, null, 2));
 
   } catch (err) {
     botState.logTerakhir = "❌ Kegagalan Siklus Konten: " + err.message;
@@ -186,6 +266,25 @@ app.get("/api/status", (req, res) => {
     ...botState,
     systemUptime: hrs + " Jam " + mins + " Menit",
     systemMemory: memoryUsed + " MB"
+  });
+});
+
+// FITUR: API Endpoint Penyuplai Data Grafik Dashboard
+app.get("/api/analytics", (req, res) => {
+  const historyData = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
+  
+  const statistikTanggal = {};
+  historyData.forEach(item => {
+    statistikTanggal[item.date] = (statistikTanggal[item.date] || 0) + 1;
+  });
+
+  res.json({
+    totalPosts: historyData.length,
+    chartData: {
+      labels: Object.keys(statistikTanggal),
+      values: Object.values(statistikTanggal)
+    },
+    recentPosts: historyData.slice(-5).reverse() 
   });
 });
 
@@ -245,5 +344,4 @@ app.get("*", (req, res) => {
 });
 
 const PORT = 3000;
-// Dikunci ketat ke 127.0.0.1 agar 100% aman dari peretas jaringan luar atau teman satu Wi-Fi
 app.listen(PORT, "127.0.0.1", () => console.log("🚀 Dashboard OS mengudara aman di http://localhost:" + PORT));
