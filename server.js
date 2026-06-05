@@ -53,9 +53,9 @@ const JEDA_WAKTU = 6 * 60 * 60 * 1000;
 const jadwalHarian = ["Indonesia", "English", "Indonesia", "English"];
 
 const daftarTopik = [
-  { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800", deskripsi: "Tren game open-world RPG terbaru PC/Konsol." },
-  { kategori: "Tech", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800", deskripsi: "Rekomendasi platform AI tools gratis terbaik dunia." },
-  { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800", deskripsi: "Panduan aman berburu crypto airdrop farming." }
+  { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80", deskripsi: "Tren game open-world RPG terbaru PC/Konsol." },
+  { kategori: "Tech", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80", deskripsi: "Rekomendasi platform AI tools gratis terbaik dunia." },
+  { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80", deskripsi: "Panduan aman berburu crypto airdrop farming." }
 ];
 
 // Scraper mengembalikan kategori data secara akurat agar gambar selalu sinkron
@@ -121,13 +121,13 @@ async function buatDanPostArtikelOtomatis() {
     }
 
     // Penentuan Gambar default disesuaikan dengan rumpun topik berita asli (Anti-Salah Gambar)
-    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?q=80&w=800"; 
+    let urlGambarFinal = "https://images.unsplash.com/photo-1495020689067-958852a6565d?auto=format&fit=crop&w=800&q=80"; 
     if (kategoriFinal === "Game") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=800";
+      urlGambarFinal = "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80";
     } else if (kategoriFinal === "Tech") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=800"; 
+      urlGambarFinal = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"; 
     } else if (kategoriFinal === "Crypto") {
-      urlGambarFinal = "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?q=80&w=800";
+      urlGambarFinal = "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80";
     }
 
     if (botState.config.apiKey && botState.config.imageModel && !botState.config.baseUrl.includes("googleapis.com")) {
@@ -156,24 +156,11 @@ async function buatDanPostArtikelOtomatis() {
       }
     }
 
-    const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
-    let instruksiInternalLink = "";
-    
-    if (riwayatLokal.length > 0) {
-      const tautanTersedia = riwayatLokal.slice(-3).map(art => `- Judul: "${art.title}" -> URL Link: ${art.url}`).join("\n");
-      instruksiInternalLink = [
-        "\n🔗 STRATEGI SMART SEO INTERNAL LINKING:",
-        "Kamu diwajibkan menyisipkan minimal 1 atau maksimal 2 link dari daftar artikel lama kami di bawah ini secara natural ke dalam kata atau frasa yang relevan di dalam paragraf artikel baru (Gunakan tag murni <a href='URL'>teks frasa</a>):",
-        tautanTersedia,
-        "Pastikan penempatannya mengalir alami dan tidak dipaksakan."
-      ].join("\n");
-    }
-
+    // Teks Prompt SEO Bersih tanpa instruksi internal linking / tautan balik
     const promptSEO = [
       "Kamu adalah praktisi SEO senior dan blogger profesional.",
       "Buat artikel mendalam berdasarkan kabar terbaru berikut: " + deskripsiArtikel,
       "Wajib ditulis penuh dalam bahasa: " + bahasa,
-      instruksiInternalLink,
       "",
       "FORMAT OUTPUT WAJIB (PISAHKAN JELAS DENGAN ENTER):",
       "[JUDUL] Tulis judul artikel saja tanpa tag HTML.",
@@ -181,6 +168,7 @@ async function buatDanPostArtikelOtomatis() {
       "[KONTEN] Isi artikel berupa HTML murni dimulai langsung dengan paragraf atau sub-judul.",
       "",
       "❌ LARANGAN KERAS (JANGAN PERNAH DITULIS):",
+      "- JANGAN memasukkan tautan/link URL apa pun ke dalam teks.",
       "- JANGAN memasukkan tag luar seperti <html>, <head>, <body>, <!DOCTYPE>, atau tag <lang>.",
       "- JANGAN memasukkan footer, credit teks, nama penulis placeholder, atau tulisan 'Copyright © 2023'.",
       "- JANGAN menuliskan kata penutup penanda format seperti [AKHIR], [SELESAI], atau tanda petik tiga markdown (```)."
@@ -216,19 +204,13 @@ async function buatDanPostArtikelOtomatis() {
     const deskripsiPenelusuran = bagianDeskripsi[1].trim();
     const kontenHTMLRaw = bagianKonten[1].split(tigaPetik).join("").split("html").join("").trim();
 
-    // FIX 2: Gambar dibungkus tag <a> dengan properti imageanchor="1" resmi agar langsung dirender jadi thumbnail di Sidebar
-    const bannerHTML = [
-      `<div class="separator" style="clear: both; text-align: center; margin-bottom: 25px;">`,
-      `  <a href="${urlGambarFinal}" imageanchor="1" style="margin-left: 1em; margin-right: 1em;">`,
-      `    <img border="0" src="${urlGambarFinal}" alt="${judulFinal}" style="margin-left: auto; margin-right: auto; width: 100%; max-width: 800px; height: auto; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);" />`,
-      `  </a>`,
-      `</div><br/>`
-    ].join("\n");
+    // FIX GAMBAR POLOS: Pure tag img diletakkan paling atas tanpa pembungkus tag tautan jangkar (<a>) sesuai request
+    const bannerHTML = `<img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; max-width: 800px; height: auto; border-radius: 12px; display: block; margin: 0 auto 25px auto;" /><br/>`;
 
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
     const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
-    oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_REFRESH_TOKEN || botState.config.refreshToken });
+    oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
 
     const response = await blogger.posts.insert({
@@ -244,6 +226,7 @@ async function buatDanPostArtikelOtomatis() {
     const postUrl = response.data.url;
     botState.logTerakhir = "🎉 [SUKSES KONTEN] Berhasil tayang di blog! URL: " + postUrl;
 
+    const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
       id: response.data.id,
       title: judulFinal,
@@ -260,10 +243,6 @@ async function buatDanPostArtikelOtomatis() {
   botState.indeksJadwal = (botState.indeksJadwal + 1) % jadwalHarian.length;
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
-
-// ==========================================
-// ROUTING API CONTROL CENTER & BRANKAS PROFIL
-// ==========================================
 
 app.get("/api/status", (req, res) => {
   const diffMs = Date.now() - startTime;
