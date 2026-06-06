@@ -56,7 +56,7 @@ let botState = {
 };
 
 let botIntervalObject = null;
-const JEDA_WAKTU = 6 * 60 * 60 * 1000; // 6 Jam
+const JEDA_WAKTU = 3 * 60 * 60 * 1000; // SUDAH DIUBAH JADI 3 JAM SEKALI
 
 // --- SISTEM ANTREAN ADIL (ROUND-ROBIN) ---
 const daftarLabelMenu = [
@@ -249,16 +249,15 @@ async function buatDanPostArtikelOtomatis() {
     if (matchKonten) kontenHTMLRaw = matchKonten[1].trim();
 
     // --- FAIL-SAFE JUDUL UNIK (Tanpa Judul Asli) ---
-    // Jika AI lupa menulis kata "JUDUL:", ambil saja baris paling atas dari teksnya.
     if (!judulFinal) {
       const barisTeks = teksBersih.split('\n').filter(b => b.trim() !== "");
       judulFinal = barisTeks[0].replace(/JUDUL:\s*/i, "").trim();
     }
 
-    // WAJIB: Hapus semua tag HTML dari judul kalau AI membandel menulis <p> atau <h2> di judulnya
+    // Hapus semua tag HTML dari judul
     judulFinal = judulFinal.replace(/<[^>]*>?/gm, '').trim();
 
-    // WAJIB: Potong judul dengan paksa jika terlalu panjang (Sisa dari error paragraf)
+    // Potong judul dengan paksa jika terlalu panjang
     if (judulFinal.length > 85) {
       judulFinal = judulFinal.substring(0, 85).trim() + "...";
     }
