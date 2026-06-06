@@ -17,7 +17,6 @@ const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
 
-// Konfigurasi Parser membawa identitas Browser Premium
 const parser = new Parser({
   customFields: {
     item: [
@@ -56,9 +55,8 @@ let botState = {
 };
 
 let botIntervalObject = null;
-const JEDA_WAKTU = 3 * 60 * 60 * 1000; // 3 Jam
+const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
-// --- SISTEM ANTREAN SUMBER BERITA ---
 const daftarMenuUntukScrape = [
   "ANDROID", 
   "INSTALASI OS", 
@@ -73,7 +71,6 @@ const daftarLabelValidBlogger = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", "LAINNYA"
 ];
 
-// --- BANK TOPIK CADANGAN ---
 const fallbackTopik = {
   "ANDROID": "Review HP Android terbaru, rekomendasi aplikasi Android, atau tips baterai awet.",
   "INSTALASI OS": "Tutorial instalasi Windows 11, cara dual-boot Linux dan Windows, atau mengatasi Blue Screen.",
@@ -159,7 +156,6 @@ async function buatDanPostArtikelOtomatis() {
 
     let urlGambarFinal = "";
 
-    // Proxy Anti Hotlink
     if (trendBerita && trendBerita.scrapedImage) {
       urlGambarFinal = "https://wsrv.nl/?url=" + encodeURIComponent(trendBerita.scrapedImage);
     }
@@ -258,7 +254,6 @@ async function buatDanPostArtikelOtomatis() {
       judulFinal = barisTeks[0].replace(/JUDUL:\s*/i, "").trim();
     }
     
-    // PERBAIKAN: Sapu bersih judul dari HTML dan hilangkan titik-titik bawaan AI
     judulFinal = judulFinal.replace(/<[^>]*>?/gm, '').trim();
     judulFinal = judulFinal.replace(/\.\.\.$/, "").replace(/\.\.$/, "").trim();
 
@@ -266,10 +261,9 @@ async function buatDanPostArtikelOtomatis() {
       kontenHTMLRaw = teksBersih.replace(/JUDUL:\s*[^\n]+/gi, "").replace(/DESKRIPSI:\s*[^\n]+/gi, "").replace(/LABEL:\s*[^\n]+/gi, "").trim();
     }
 
-    // PERBAIKAN: Sembunyikan gambar asli agar tidak double dengan thumbnail bawaan template Blogger
     const bannerHTML = `
-      <div style="display: none;">
-        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" />
+      <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
+        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
       </div>
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
