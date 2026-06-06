@@ -17,7 +17,7 @@ const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
 
-// Konfigurasi Parser membawa identitas Browser Premium agar sukses masuk ke web anti-bot
+// Konfigurasi Parser membawa identitas Browser Premium
 const parser = new Parser({
   customFields: {
     item: [
@@ -126,7 +126,6 @@ async function fetchLatestTrend(targetLabel) {
     if (feed.items && feed.items.length > 0) {
       const beritaTerbaru = feed.items[0];
       
-      // Ambil gambar aslinya dengan berbagai cara scraping
       let imageUrl = "";
       if (beritaTerbaru.enclosure && beritaTerbaru.enclosure.url) {
         imageUrl = beritaTerbaru.enclosure.url;
@@ -138,7 +137,6 @@ async function fetchLatestTrend(targetLabel) {
         imageUrl = thumb.$ ? thumb.$.url : "";
       }
       
-      // Jika masih tidak ada, coba regex dari konten HTML-nya
       if (!imageUrl) {
         const gabungHTML = (beritaTerbaru.content || "") + (beritaTerbaru.description || "");
         const match = gabungHTML.match(/<img[^>]+src=["']([^"']+)["']/i);
@@ -168,23 +166,21 @@ async function buatDanPostArtikelOtomatis() {
     const trendBerita = await fetchLatestTrend(labelTargetHariIni);
     
     let deskripsiArtikel = fallbackTopik[labelTargetHariIni];
-    let judulBeritaAsli = "";
+    let judulBeritaAsli = "Tren Teknologi Terkini";
     
     if (trendBerita) {
       botState.logTerakhir = `📰 Berita ketemu dari [${trendBerita.source}]: ${trendBerita.title}`;
-      deskripsiArtikel = `Berita hangat tentang: ${trendBerita.title}. Intisari fakta berita: ${trendBerita.summary}`;
+      deskripsiArtikel = `Intisari berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
     }
 
     let urlGambarFinal = "";
 
-    // PRIORITAS UTAMA: Ambil gambar asli dari situs beritanya biar nyambung 100%
     if (trendBerita && trendBerita.scrapedImage) {
       urlGambarFinal = trendBerita.scrapedImage;
       botState.logTerakhir = "📸 Gambar ASLI DITEMUKAN! Siap diterapkan Filter Anti-Copyright.";
     }
 
-    // FALLBACK: Hanya jika berita sama sekali tidak ada gambarnya, pakai Unsplash
     if (!urlGambarFinal) {
       const bankGambarBersih = {
         "ANDROID": ["https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80"],
@@ -202,32 +198,23 @@ async function buatDanPostArtikelOtomatis() {
 
     const promptSEO = [
       "Kamu adalah penulis artikel blog teknologi dan umum profesional.",
-      `Buat artikel mendalam berdasarkan kabar/topik berikut: ${deskripsiArtikel}`,
-      "Wajib ditulis penuh dalam bahasa Indonesia.",
+      `Topik asli: "${judulBeritaAsli}"`,
+      `Detail: ${deskripsiArtikel}`,
       "",
-      `🔴 PENTING: Artikel ini WAJIB berfokus pada tema untuk label: ${labelTargetHariIni}.`,
-      "Aturan Topik:",
-      "- Jika label SOFTWARE: Bahas aplikasi, tools PC, atau OS. DILARANG KERAS membahas game/konsol.",
-      "- Jika label GAME: Bahas game PC/Mobile, e-sports, atau konsol (PS4/PS5).",
-      "- Jika label LAINNYA: Bahas berita Olahraga, Crypto, atau AI.",
+      `TUGAS UTAMA: Buat artikel mendalam untuk label ${labelTargetHariIni}.`,
+      "🔴 ATURAN JUDUL (SANGAT PENTING):",
+      "- JANGAN PERNAH memakai/copy-paste judul asli di atas.",
+      "- Buat JUDUL BARU yang 100% UNIK, beda, menarik (clickbait SEO), tapi tidak murahan.",
+      "- Judul WAJIB bersih, dilarang memakai tag HTML seperti <p> atau <h2>.",
       "",
-      "🔴 ATURAN KERAPIAN TULISAN (HTML):",
-      "- Tulisan DILARANG KERAS DEMPET. Gunakan struktur HTML yang rapi dan nyaman dibaca.",
-      "- WAJIB bungkus setiap paragraf dengan tag <p>...</p>. Buat paragraf pendek (maksimal 3-4 kalimat per paragraf).",
-      "- Gunakan tag <h2>...</h2> atau <h3>...</h3> untuk memisahkan setiap sub-judul.",
-      "- Gunakan tag <ul><li>...</li></ul> jika ada poin-poin penjelasan.",
-      "- Tambahkan spasi jarak antar bagian dengan tag <br><br> setelah penutup </p> atau penutup </ul> jika diperlukan.",
+      "🔴 ATURAN KONTEN:",
+      "- WAJIB bungkus setiap paragraf dengan tag <p>...</p>.",
+      "- Gunakan tag <h2>...</h2> untuk sub-judul.",
       "",
-      "FORMAT OUTPUT WAJIB (PISAHKAN JELAS DENGAN ENTER):",
-      "[JUDUL] Tulis judul artikel SEO-friendly tanpa tag HTML.",
-      "[DESKRIPSI] Tulis satu kalimat meta deskripsi SEO (maksimal 140 karakter).",
-      "[KONTEN] Isi artikel berupa HTML murni dimulai langsung dengan tag <p> atau <h2>.",
-      "",
-      "❌ LARANGAN KERAS (JANGAN PERNAH DITULIS):",
-      "- JANGAN memasukkan tautan/link URL apa pun ke dalam teks.",
-      "- JANGAN memasukkan tag luar seperti <html>, <head>, <body>, <!DOCTYPE>, atau tag <lang>.",
-      "- JANGAN memasukkan footer, credit teks, nama penulis placeholder, atau tulisan 'Copyright'.",
-      "- JANGAN menuliskan kata penutup penanda format seperti [AKHIR], [SELESAI], atau tanda petik tiga markdown (```)."
+      "🔴 FORMAT OUTPUT WAJIB (Ikuti 3 baris ini persis):",
+      "JUDUL: [Tulis Judul Unik Baru Disini - Maksimal 75 Karakter]",
+      "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
+      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -245,42 +232,54 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     const responsTeks = dataText.choices[0].message.content.trim();
 
+    // Membersihkan teks dari markdown code block bawaan AI
     const teksBersih = responsTeks.replace(/```html/gi, "").replace(/```/g, "").replace(/\*\*/g, "").trim();
 
-    function ekstrakBagianIndependent(teks, kataKunci) {
-      const regex = new RegExp(`(?:\\[?${kataKunci}\\]?:?)\\s*([\\s\\S]*?)(?=\\[?(?:JUDUL|DESKRIPSI|KONTEN)\\]?:?|$)`, "i");
-      const match = teks.match(regex);
-      return match ? match[1].trim() : "";
+    let judulFinal = "";
+    let deskripsiPenelusuran = "";
+    let kontenHTMLRaw = "";
+
+    const matchJudul = teksBersih.match(/JUDUL:\s*([^\n]+)/i);
+    if (matchJudul) judulFinal = matchJudul[1].trim();
+
+    const matchDeskripsi = teksBersih.match(/DESKRIPSI:\s*([^\n]+)/i);
+    if (matchDeskripsi) deskripsiPenelusuran = matchDeskripsi[1].trim();
+
+    const matchKonten = teksBersih.match(/KONTEN:\s*([\s\S]+)/i);
+    if (matchKonten) kontenHTMLRaw = matchKonten[1].trim();
+
+    // --- FAIL-SAFE JUDUL UNIK (Tanpa Judul Asli) ---
+    // Jika AI lupa menulis kata "JUDUL:", ambil saja baris paling atas dari teksnya.
+    if (!judulFinal) {
+      const barisTeks = teksBersih.split('\n').filter(b => b.trim() !== "");
+      judulFinal = barisTeks[0].replace(/JUDUL:\s*/i, "").trim();
     }
 
-    let judulFinal = ekstrakBagianIndependent(teksBersih, "JUDUL");
-    let deskripsiPenelusuran = ekstrakBagianIndependent(teksBersih, "DESKRIPSI");
-    let kontenHTMLRaw = ekstrakBagianIndependent(teksBersih, "KONTEN");
+    // WAJIB: Hapus semua tag HTML dari judul kalau AI membandel menulis <p> atau <h2> di judulnya
+    judulFinal = judulFinal.replace(/<[^>]*>?/gm, '').trim();
 
-    if (!judulFinal || !kontenHTMLRaw) {
-      const barisTeks = teksBersih.split("\n").filter(b => b.trim() !== "");
-      judulFinal = barisTeks[0] ? barisTeks[0].replace(/\[?JUDUL\]?/i, "").trim() : (judulBeritaAsli || `Artikel Tren ${labelTargetHariIni}`);
-      deskripsiPenelusuran = barisTeks[1] ? barisTeks[1].replace(/\[?DESKRIPSI\]?/i, "").slice(0, 140).trim() : judulFinal;
-      kontenHTMLRaw = teksBersih.replace(/\[?JUDUL\]?/i, "").replace(/\[?DESKRIPSI\]?/i, "").replace(/\[?KONTEN\]?/i, "").trim();
+    // WAJIB: Potong judul dengan paksa jika terlalu panjang (Sisa dari error paragraf)
+    if (judulFinal.length > 85) {
+      judulFinal = judulFinal.substring(0, 85).trim() + "...";
     }
 
-    // --- FITUR AUTO-EDIT GAMBAR (ANTI COPYRIGHT BYPASS) ---
-    // Filter CSS ini akan "mencuci" gambar asli:
-    // 1. Naikkan Kontras & Saturasi (Bikin sidik jari warna berubah)
-    // 2. Tambah Sepia 10% (Perubahan tone dasar)
-    // 3. Hue Rotate 2deg (Menggeser warna tanpa terlihat aneh oleh mata manusia)
-    // 4. Transform: translateZ(0) (Memicu hardware acceleration agar gambar dirender ulang)
+    // Validasi konten
+    if (!kontenHTMLRaw) {
+      kontenHTMLRaw = teksBersih.replace(/JUDUL:\s*[^\n]+/gi, "").replace(/DESKRIPSI:\s*[^\n]+/gi, "").trim();
+    }
+
+    // Filter CSS Anti-Copyright
     const cssAntiCopyright = "filter: contrast(108%) saturate(115%) sepia(10%) hue-rotate(2deg) brightness(98%); transform: translateZ(0);";
     
     const bannerHTML = `
       <div style="overflow: hidden; border-radius: 12px; margin: 0 auto 25px auto; max-width: 800px;">
-        <img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; height: auto; display: block; ${cssAntiCopyright}" />
+        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" style="width: 100%; height: auto; display: block; ${cssAntiCopyright}" />
       </div><br/>
     `;
     
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
-    const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
+    const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "https://developers.google.com/oauthplayground");
     oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
 
@@ -290,7 +289,7 @@ async function buatDanPostArtikelOtomatis() {
         title: judulFinal,
         content: kontenHTMLFinal,
         labels: [labelTargetHariIni], 
-        searchDescription: deskripsiPenelusuran
+        searchDescription: deskripsiPenelusuran.substring(0, 140)
       }
     });
 
@@ -311,7 +310,6 @@ async function buatDanPostArtikelOtomatis() {
     botState.logTerakhir = `❌ Gagal Posting Label [${labelTargetHariIni}]: ` + err.message;
   }
 
-  // Pindah Antrean ke Label Selanjutnya (Round Robin)
   botState.indeksJadwal = (botState.indeksJadwal + 1) % daftarLabelMenu.length;
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
