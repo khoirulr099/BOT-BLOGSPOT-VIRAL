@@ -17,7 +17,7 @@ const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
 
-// Konfigurasi Parser membawa identitas Browser Premium agar tidak diblokir server (Anti-ECONNRESET)
+// Konfigurasi Parser membawa identitas Browser Premium
 const parser = new Parser({
   customFields: {
     item: [
@@ -41,7 +41,7 @@ let botState = {
   engineStatus: "CORE IDLE (Standby)",
   nextPostTime: "Menunggu Mesin Dinyalakan",
   indeksJadwal: 0,
-  logTerakhir: "Sistem Control Center Siap. Silakan pilih atau tambah profil API.",
+  logTerakhir: "Sistem Control Center Siap. Menunggu perintah jalankan mesin.",
   activeProfileName: "Belum Ada (Menggunakan Default .env)",
   config: {
     apiKey: process.env.GEMINI_API_KEY || "",
@@ -56,36 +56,73 @@ let botState = {
 };
 
 let botIntervalObject = null;
-const JEDA_WAKTU = 6 * 60 * 60 * 1000; 
-const jadwalHarian = ["Indonesia", "English", "Indonesia", "English"];
+const JEDA_WAKTU = 6 * 60 * 60 * 1000; // 6 Jam
 
-const daftarTopik = [
-  { kategori: "Game", labelBlogger: "Game", imageUrl: "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80", deskripsi: "Tren game open-world RPG terbaru PC/Konsol." },
-  { kategori: "Tech", labelBlogger: "Software", imageUrl: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80", deskripsi: "Rekomendasi platform AI tools gratis terbaik dunia." },
-  { kategori: "Crypto", labelBlogger: "Lainnya", imageUrl: "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80", deskripsi: "Panduan aman berburu crypto airdrop farming." }
+// --- SISTEM ANTREAN ADIL (ROUND-ROBIN) ---
+const daftarLabelMenu = [
+  "ANDROID", 
+  "INSTALASI OS", 
+  "JARINGAN", 
+  "SOFTWARE", 
+  "WEB DESAIN", 
+  "GAME", 
+  "LAINNYA"
 ];
 
-async function fetchLatestTrend(bahasa) {
+// --- BANK TOPIK CADANGAN (Jika Scrape Gagal) ---
+const fallbackTopik = {
+  "ANDROID": "Review HP Android terbaru, rekomendasi aplikasi Android, atau tips baterai awet.",
+  "INSTALASI OS": "Tutorial instalasi Windows 11, cara dual-boot Linux dan Windows, atau mengatasi Blue Screen.",
+  "JARINGAN": "Cara setting router Mikrotik, memperkuat sinyal WiFi, atau dasar-dasar keamanan jaringan.",
+  "SOFTWARE": "Review software PC terbaru untuk produktivitas (bukan game), update browser, atau AI Tools desktop.",
+  "WEB DESAIN": "Tutorial HTML/CSS, tren UI/UX terkini, atau cara menggunakan framework Tailwind CSS.",
+  "GAME": "Review game PC/Konsol terbaru seperti PS4/PS5, tips push rank e-sports, atau update developer.",
+  "LAINNYA": "Berita olahraga terkini (Sepak bola/MotoGP), tren Crypto/Web3, atau perkembangan teknologi AI."
+};
+
+async function fetchLatestTrend(targetLabel) {
+  // --- MAPPING RSS FEED (GABUNGAN SITUS LAMA KAMU & SITUS BARU) ---
   const targetFeeds = {
-    Indonesia: [
-      { url: "https://www.cnbcindonesia.com/tech/rss", kategori: "Tech", label: "Software" },
-      { url: "https://rss.detik.com/index.php/inet", kategori: "Game", label: "Game" },
-      { url: "https://www.antaranews.com/rss/tekno.xml", kategori: "Tech", label: "Software" }
+    "ANDROID": [
+      "https://www.androidauthority.com/feed/"
     ],
-    English: [
-      { url: "https://feeds.feedburner.com/ign/news", kategori: "Game", label: "Game" },
-      { url: "https://www.theverge.com/rss/index.xml", kategori: "Tech", label: "Software" },
-      { url: "https://techcrunch.com/feed/", kategori: "Tech", label: "Software" },
-      { url: "https://www.coindesk.com/arc/outboundfeeds/rss/", kategori: "Crypto", label: "Lainnya" }
+    "INSTALASI OS": [
+      "https://www.windowscentral.com/rss",
+      "https://betanews.com/feed/"
+    ],
+    "JARINGAN": [
+      "https://www.networkworld.com/feed/"
+    ],
+    "SOFTWARE": [
+      "https://techcrunch.com/category/software/feed/",
+      "https://www.theverge.com/software/rss/index.xml",
+      "https://www.cnbcindonesia.com/tech/rss", // Dari kode lama kamu
+      "https://www.antaranews.com/rss/tekno.xml", // Dari kode lama kamu
+      "https://techcrunch.com/feed/" // Dari kode lama kamu
+    ],
+    "WEB DESAIN": [
+      "https://css-tricks.com/feed/",
+      "https://tympanus.net/codrops/feed/"
+    ],
+    "GAME": [
+      "https://feeds.feedburner.com/ign/news", // Dari kode lama kamu
+      "https://kotaku.com/rss",
+      "https://rss.detik.com/index.php/inet" // Dari kode lama kamu (Inet Detik)
+    ],
+    "LAINNYA": [
+      "https://www.espn.com/espn/rss/news", // Olahraga Baru
+      "https://cointelegraph.com/rss", 
+      "https://www.coindesk.com/arc/outboundfeeds/rss/", // Crypto dari kode lama kamu
+      "https://techcrunch.com/category/artificial-intelligence/feed/" 
     ]
   };
 
   try {
-    const listFeeds = targetFeeds[bahasa] || targetFeeds["English"];
-    const selectedFeed = listFeeds[Math.floor(Math.random() * listFeeds.length)];
+    const listFeeds = targetFeeds[targetLabel];
+    const feedUrl = listFeeds[Math.floor(Math.random() * listFeeds.length)];
     
-    console.log(`📡 Menghubungkan ke portal: ${selectedFeed.url}`);
-    const feed = await parser.parseURL(selectedFeed.url);
+    console.log(`📡 Menghubungkan ke portal untuk label [${targetLabel}]: ${feedUrl}`);
+    const feed = await parser.parseURL(feedUrl);
     
     if (feed.items && feed.items.length > 0) {
       const beritaTerbaru = feed.items[0];
@@ -110,90 +147,76 @@ async function fetchLatestTrend(bahasa) {
       return {
         title: beritaTerbaru.title,
         summary: beritaTerbaru.contentSnippet || beritaTerbaru.content || "Info tren terkini.",
-        source: feed.title || "Portal Berita Terpercaya",
-        kategori: selectedFeed.kategori,
-        labelBlogger: selectedFeed.label,
+        source: feed.title || feedUrl,
         scrapedImage: imageUrl 
       };
     }
     return null;
   } catch (error) {
-    console.error("Gagal nge-scrape berita tren, beralih ke bank topik:", error.message);
+    console.error(`Gagal nge-scrape berita untuk label ${targetLabel}, beralih ke bank topik:`, error.message);
     return null;
   }
 }
 
 async function buatDanPostArtikelOtomatis() {
-  const bahasa = jadwalHarian[botState.indeksJadwal];
-  const topikFallback = daftarTopik[Math.floor(Math.random() * daftarTopik.length)];
+  const labelTargetHariIni = daftarLabelMenu[botState.indeksJadwal];
   
   try {
-    botState.logTerakhir = "🤖 Mencari berita berita terbaru untuk bahasa: " + bahasa;
+    botState.logTerakhir = `🤖 Mulai memproses artikel khusus untuk label: [${labelTargetHariIni}]`;
     
-    const trendBerita = await fetchLatestTrend(bahasa);
+    const trendBerita = await fetchLatestTrend(labelTargetHariIni);
     
-    let deskripsiArtikel = topikFallback.deskripsi;
+    let deskripsiArtikel = fallbackTopik[labelTargetHariIni];
     let judulBeritaAsli = "";
-    let kategoriFinal = topikFallback.kategori;
-    let labelBloggerFinal = topikFallback.labelBlogger;
     
     if (trendBerita) {
       botState.logTerakhir = `📰 Berita ketemu dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Berita hangat tentang: ${trendBerita.title}. Intisari fakta berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
-      kategoriFinal = trendBerita.kategori;
-      labelBloggerFinal = trendBerita.labelBlogger;
     }
 
     let urlGambarFinal = "";
 
-    // Prioritas 1: Ambil Gambar Asli Hasil Scrape
     if (trendBerita && trendBerita.scrapedImage) {
       urlGambarFinal = trendBerita.scrapedImage;
       botState.logTerakhir = "📸 Sukses mendeteksi gambar asli dari situs sumber!";
     }
 
-    // Prioritas 2: Bank Gambar Cadangan Kategori Acak HD (Jika scrape gambar gagal)
+    // Bank Gambar Cadangan Jika Scrape Gambar Gagal
     if (!urlGambarFinal) {
-      if (kategoriFinal === "Game") {
-        const bankGame = [
-          "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1542751371-adc38448a05e?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1511512578047-dfb367046420?auto=format&fit=crop&w=800&q=80"
-        ];
-        urlGambarFinal = bankGame[Math.floor(Math.random() * bankGame.length)];
-      } else if (kategoriFinal === "Tech") {
-        const bankTech = [
-          "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=800&q=80"
-        ];
-        urlGambarFinal = bankTech[Math.floor(Math.random() * bankTech.length)];
-      } else if (kategoriFinal === "Crypto") {
-        const bankCrypto = [
-          "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1622630998477-20aa696ecb05?auto=format&fit=crop&w=800&q=80",
-          "https://images.unsplash.com/photo-1516245834210-c4c142787335?auto=format&fit=crop&w=800&q=80"
-        ];
-        urlGambarFinal = bankCrypto[Math.floor(Math.random() * bankCrypto.length)];
-      }
-      botState.logTerakhir = "📸 Gambar disesuaikan otomatis menggunakan bank gambar kategori premium!";
+      const gambarCadangan = {
+        "ANDROID": "https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80",
+        "INSTALASI OS": "https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80",
+        "JARINGAN": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
+        "SOFTWARE": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
+        "WEB DESAIN": "https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80",
+        "GAME": "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80",
+        "LAINNYA": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80"
+      };
+      urlGambarFinal = gambarCadangan[labelTargetHariIni];
+      botState.logTerakhir = `📸 Menggunakan gambar cadangan default untuk label ${labelTargetHariIni}`;
     }
 
     const promptSEO = [
-      "Kamu adalah praktisi SEO senior and blogger profesional.",
-      "Buat artikel mendalam berdasarkan kabar terbaru berikut: " + deskripsiArtikel,
-      "Wajib ditulis penuh dalam bahasa: " + bahasa,
+      "Kamu adalah penulis artikel blog teknologi dan umum profesional.",
+      `Buat artikel mendalam berdasarkan kabar/topik berikut: ${deskripsiArtikel}`,
+      "Wajib ditulis penuh dalam bahasa Indonesia.",
+      "",
+      `🔴 PENTING: Artikel ini WAJIB berfokus pada tema untuk label: ${labelTargetHariIni}.`,
+      "Aturan Topik:",
+      "- Jika label SOFTWARE: Bahas aplikasi, tools PC, atau OS. DILARANG KERAS membahas game/konsol.",
+      "- Jika label GAME: Bahas game PC/Mobile, e-sports, atau konsol (PS4/PS5).",
+      "- Jika label LAINNYA: Bahas berita Olahraga, Crypto, atau AI.",
       "",
       "FORMAT OUTPUT WAJIB (PISAHKAN JELAS DENGAN ENTER):",
-      "[JUDUL] Tulis judul artikel saja tanpa tag HTML.",
+      "[JUDUL] Tulis judul artikel SEO-friendly tanpa tag HTML.",
       "[DESKRIPSI] Tulis satu kalimat meta deskripsi SEO (maksimal 140 karakter).",
       "[KONTEN] Isi artikel berupa HTML murni dimulai langsung dengan paragraf atau sub-judul.",
       "",
       "❌ LARANGAN KERAS (JANGAN PERNAH DITULIS):",
       "- JANGAN memasukkan tautan/link URL apa pun ke dalam teks.",
       "- JANGAN memasukkan tag luar seperti <html>, <head>, <body>, <!DOCTYPE>, atau tag <lang>.",
-      "- JANGAN memasukkan footer, credit teks, nama penulis placeholder, atau tulisan 'Copyright © 2023'.",
+      "- JANGAN memasukkan footer, credit teks, nama penulis placeholder, atau tulisan 'Copyright'.",
       "- JANGAN menuliskan kata penutup penanda format seperti [AKHIR], [SELESAI], atau tanda petik tiga markdown (```)."
     ].join("\n");
     
@@ -226,13 +249,11 @@ async function buatDanPostArtikelOtomatis() {
 
     if (!judulFinal || !kontenHTMLRaw) {
       const barisTeks = teksBersih.split("\n").filter(b => b.trim() !== "");
-      judulFinal = barisTeks[0] ? barisTeks[0].replace(/\[?JUDUL\]?/i, "").trim() : (judulBeritaAsli || "Artikel Tren Viral Terbaru");
+      judulFinal = barisTeks[0] ? barisTeks[0].replace(/\[?JUDUL\]?/i, "").trim() : (judulBeritaAsli || `Artikel Tren ${labelTargetHariIni}`);
       deskripsiPenelusuran = barisTeks[1] ? barisTeks[1].replace(/\[?DESKRIPSI\]?/i, "").slice(0, 140).trim() : judulFinal;
       kontenHTMLRaw = teksBersih.replace(/\[?JUDUL\]?/i, "").replace(/\[?DESKRIPSI\]?/i, "").replace(/\[?KONTEN\]?/i, "").trim();
     }
 
-    // --- FITUR AUTO-EDIT ANTI COPYRIGHT ---
-    // CSS Filter ini merubah kontras, warna dasar (hue), saturasi, dan sepia secara instan agar "Sidik Jari Gambar" lolos dari sistem copyright Google.
     const cssAntiCopyright = "filter: contrast(115%) saturate(120%) sepia(15%) hue-rotate(2deg);";
     const bannerHTML = `<img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; max-width: 800px; height: auto; border-radius: 12px; display: block; margin: 0 auto 25px auto; ${cssAntiCopyright}" /><br/>`;
     
@@ -247,14 +268,13 @@ async function buatDanPostArtikelOtomatis() {
       requestBody: {
         title: judulFinal,
         content: kontenHTMLFinal,
-        labels: [labelBloggerFinal],
+        labels: [labelTargetHariIni], 
         searchDescription: deskripsiPenelusuran
       }
     });
 
     const postUrl = response.data.url;
-    const sumberSitus = trendBerita ? trendBerita.source : "Bank Topik Cadangan";
-    botState.logTerakhir = `🎉 [SUKSES KONTEN] Tayang & Auto-Edit Anti Copyright (Sumber: ${sumberSitus})! URL: ${postUrl}`;
+    botState.logTerakhir = `🎉 [SUKSES KONTEN] Masuk ke Label: ${labelTargetHariIni}! URL: ${postUrl}`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
@@ -262,15 +282,16 @@ async function buatDanPostArtikelOtomatis() {
       title: judulFinal,
       url: postUrl,
       date: new Date().toLocaleDateString("id-ID"),
-      lang: bahasa
+      label: labelTargetHariIni
     });
     fs.writeFileSync(HISTORY_FILE, JSON.stringify(riwayatLokal, null, 2));
 
   } catch (err) {
-    botState.logTerakhir = "❌ Kegagalan Siklus Konten: " + err.message;
+    botState.logTerakhir = `❌ Gagal Posting Label [${labelTargetHariIni}]: ` + err.message;
   }
 
-  botState.indeksJadwal = (botState.indeksJadwal + 1) % jadwalHarian.length;
+  // Pindah Antrean ke Label Selanjutnya (Round Robin)
+  botState.indeksJadwal = (botState.indeksJadwal + 1) % daftarLabelMenu.length;
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
 
