@@ -45,7 +45,7 @@ let botState = {
   activeProfileName: "Belum Ada (Menggunakan Default .env)",
   config: {
     apiKey: process.env.GEMINI_API_KEY || "",
-    baseUrl: "[https://generativelanguage.googleapis.com/v1beta/openai/](https://generativelanguage.googleapis.com/v1beta/openai/)",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
     textModel: "gemini-2.5-flash",
     imageModel: "dall-e-3",
     blogId: process.env.BLOGGER_BLOG_ID || "",
@@ -86,13 +86,13 @@ const fallbackTopik = {
 
 async function fetchLatestTrend(targetKategoriSitus) {
   const targetFeeds = {
-    "ANDROID": ["[https://www.androidauthority.com/feed/](https://www.androidauthority.com/feed/)"],
-    "INSTALASI OS": ["[https://www.windowscentral.com/rss](https://www.windowscentral.com/rss)", "[https://betanews.com/feed/](https://betanews.com/feed/)"],
-    "JARINGAN": ["[https://www.networkworld.com/feed/](https://www.networkworld.com/feed/)"],
-    "SOFTWARE": ["[https://techcrunch.com/category/software/feed/](https://techcrunch.com/category/software/feed/)", "[https://www.theverge.com/software/rss/index.xml](https://www.theverge.com/software/rss/index.xml)", "[https://www.cnbcindonesia.com/tech/rss](https://www.cnbcindonesia.com/tech/rss)"],
-    "WEB DESAIN": ["[https://css-tricks.com/feed/](https://css-tricks.com/feed/)", "[https://tympanus.net/codrops/feed/](https://tympanus.net/codrops/feed/)"],
-    "GAME": ["[https://feeds.feedburner.com/ign/news](https://feeds.feedburner.com/ign/news)", "[https://kotaku.com/rss](https://kotaku.com/rss)", "[https://rss.detik.com/index.php/inet](https://rss.detik.com/index.php/inet)"],
-    "LAINNYA": ["[https://www.espn.com/espn/rss/news](https://www.espn.com/espn/rss/news)", "[https://cointelegraph.com/rss](https://cointelegraph.com/rss)", "[https://techcrunch.com/category/artificial-intelligence/feed/](https://techcrunch.com/category/artificial-intelligence/feed/)"]
+    "ANDROID": ["https://www.androidauthority.com/feed/"],
+    "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
+    "JARINGAN": ["https://www.networkworld.com/feed/"],
+    "SOFTWARE": ["https://techcrunch.com/category/software/feed/", "https://www.theverge.com/software/rss/index.xml", "https://www.cnbcindonesia.com/tech/rss"],
+    "WEB DESAIN": ["https://css-tricks.com/feed/", "https://tympanus.net/codrops/feed/"],
+    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss", "https://rss.detik.com/index.php/inet"],
+    "LAINNYA": ["https://www.espn.com/espn/rss/news", "https://cointelegraph.com/rss", "https://techcrunch.com/category/artificial-intelligence/feed/"]
   };
 
   try {
@@ -120,6 +120,12 @@ async function fetchLatestTrend(targetKategoriSitus) {
         const gabungHTML = (beritaTerbaru.content || "") + (beritaTerbaru.description || "");
         const match = gabungHTML.match(/<img[^>]+src=["']([^"']+)["']/i);
         if (match && match[1]) { imageUrl = match[1]; }
+      }
+
+      // --- VALIDASI URL GAMBAR ANTI RUSAK ---
+      // Pastikan URL gambar diawali http/https. Kalau cuma /wp-content/... atau kode aneh, buang.
+      if (imageUrl && !imageUrl.startsWith("http")) {
+          imageUrl = ""; 
       }
 
       return {
@@ -155,19 +161,22 @@ async function buatDanPostArtikelOtomatis() {
 
     let urlGambarFinal = "";
 
+    // --- PROXY ANTI HOTLINK ---
+    // Gunakan wsrv.nl agar gambar asli dari situs sumber tidak memblokir Blogger (Error 403)
     if (trendBerita && trendBerita.scrapedImage) {
-      urlGambarFinal = trendBerita.scrapedImage;
+      urlGambarFinal = "https://wsrv.nl/?url=" + encodeURIComponent(trendBerita.scrapedImage);
     }
 
+    // Jika sumber berita benar-benar tidak punya gambar sama sekali, baru pakai fallback
     if (!urlGambarFinal) {
       const bankGambarBersih = {
-        "ANDROID": ["[https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80)"],
-        "INSTALASI OS": ["[https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80)"],
-        "JARINGAN": ["[https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80)"],
-        "SOFTWARE": ["[https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80)"],
-        "WEB DESAIN": ["[https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=800&q=80)"],
-        "GAME": ["[https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80)"],
-        "LAINNYA": ["[https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80)", "[https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80](https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80)"]
+        "ANDROID": ["https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80"],
+        "INSTALASI OS": ["https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80"],
+        "JARINGAN": ["https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"],
+        "SOFTWARE": ["https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80"],
+        "WEB DESAIN": ["https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=800&q=80"],
+        "GAME": ["https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80"],
+        "LAINNYA": ["https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80"]
       };
       const daftarGambarPilihan = bankGambarBersih[kategoriSumberHariIni];
       urlGambarFinal = daftarGambarPilihan[Math.floor(Math.random() * daftarGambarPilihan.length)];
@@ -217,7 +226,6 @@ async function buatDanPostArtikelOtomatis() {
     const dataText = await resText.json();
     let responsTeks = dataText.choices[0].message.content.trim();
 
-    // Pembersih Kode yang Sudah Diperbaiki (Anti-Error VS Code)
     let teksBersih = responsTeks.replace(/\`\`\`html/gi, "").replace(/\`\`\`/g, "").trim();
     teksBersih = teksBersih.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
 
@@ -235,7 +243,6 @@ async function buatDanPostArtikelOtomatis() {
     const matchKonten = teksBersih.match(/KONTEN:\s*([\s\S]+)/i);
     if (matchKonten) kontenHTMLRaw = matchKonten[1].trim();
 
-    // Multi-Label Dinamis
     const matchLabel = teksBersih.match(/LABEL:\s*([^\n]+)/i);
     if (matchLabel) {
       const labelDariAI = matchLabel[1].split(',').map(lbl => lbl.trim().toUpperCase());
@@ -247,7 +254,6 @@ async function buatDanPostArtikelOtomatis() {
     }
     arrayLabelBlogger = arrayLabelBlogger.slice(0, 3);
 
-    // Fail-safe judul
     if (!judulFinal) {
       const barisTeks = teksBersih.split('\n').filter(b => b.trim() !== "");
       judulFinal = barisTeks[0].replace(/JUDUL:\s*/i, "").trim();
@@ -261,7 +267,6 @@ async function buatDanPostArtikelOtomatis() {
       kontenHTMLRaw = teksBersih.replace(/JUDUL:\s*[^\n]+/gi, "").replace(/DESKRIPSI:\s*[^\n]+/gi, "").replace(/LABEL:\s*[^\n]+/gi, "").trim();
     }
 
-    // CSS Filter Anti-Copyright
     const cssAntiCopyright = "filter: contrast(108%) saturate(115%) sepia(10%) hue-rotate(2deg) brightness(98%); transform: translateZ(0);";
     const bannerHTML = `
       <div style="overflow: hidden; border-radius: 12px; margin: 0 auto 25px auto; max-width: 800px;">
@@ -270,7 +275,7 @@ async function buatDanPostArtikelOtomatis() {
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
-    const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "[https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)");
+    const oauth2Client = new google.auth.OAuth2(botState.config.clientId, botState.config.clientSecret, "https://developers.google.com/oauthplayground");
     oauth2Client.setCredentials({ refresh_token: botState.config.refreshToken });
     const blogger = google.blogger({ version: "v3", auth: oauth2Client });
 
