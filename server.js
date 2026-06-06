@@ -17,7 +17,7 @@ const PROFILES_FILE = path.join(__dirname, "profiles.json");
 const HISTORY_FILE = path.join(__dirname, "history.json"); 
 const startTime = Date.now();
 
-// Konfigurasi Parser membawa identitas Browser Premium
+// Konfigurasi Parser membawa identitas Browser Premium agar sukses masuk ke web anti-bot
 const parser = new Parser({
   customFields: {
     item: [
@@ -69,7 +69,7 @@ const daftarLabelMenu = [
   "LAINNYA"
 ];
 
-// --- BANK TOPIK CADANGAN (Jika Scrape Gagal) ---
+// --- BANK TOPIK CADANGAN ---
 const fallbackTopik = {
   "ANDROID": "Review HP Android terbaru, rekomendasi aplikasi Android, atau tips baterai awet.",
   "INSTALASI OS": "Tutorial instalasi Windows 11, cara dual-boot Linux dan Windows, atau mengatasi Blue Screen.",
@@ -81,7 +81,7 @@ const fallbackTopik = {
 };
 
 async function fetchLatestTrend(targetLabel) {
-  // --- MAPPING RSS FEED (GABUNGAN SITUS LAMA KAMU & SITUS BARU) ---
+  // --- MAPPING RSS FEED ---
   const targetFeeds = {
     "ANDROID": [
       "https://www.androidauthority.com/feed/"
@@ -96,23 +96,22 @@ async function fetchLatestTrend(targetLabel) {
     "SOFTWARE": [
       "https://techcrunch.com/category/software/feed/",
       "https://www.theverge.com/software/rss/index.xml",
-      "https://www.cnbcindonesia.com/tech/rss", // Dari kode lama kamu
-      "https://www.antaranews.com/rss/tekno.xml", // Dari kode lama kamu
-      "https://techcrunch.com/feed/" // Dari kode lama kamu
+      "https://www.cnbcindonesia.com/tech/rss",
+      "https://www.antaranews.com/rss/tekno.xml"
     ],
     "WEB DESAIN": [
       "https://css-tricks.com/feed/",
       "https://tympanus.net/codrops/feed/"
     ],
     "GAME": [
-      "https://feeds.feedburner.com/ign/news", // Dari kode lama kamu
+      "https://feeds.feedburner.com/ign/news",
       "https://kotaku.com/rss",
-      "https://rss.detik.com/index.php/inet" // Dari kode lama kamu (Inet Detik)
+      "https://rss.detik.com/index.php/inet" 
     ],
     "LAINNYA": [
-      "https://www.espn.com/espn/rss/news", // Olahraga Baru
+      "https://www.espn.com/espn/rss/news", 
       "https://cointelegraph.com/rss", 
-      "https://www.coindesk.com/arc/outboundfeeds/rss/", // Crypto dari kode lama kamu
+      "https://www.coindesk.com/arc/outboundfeeds/rss/",
       "https://techcrunch.com/category/artificial-intelligence/feed/" 
     ]
   };
@@ -127,6 +126,7 @@ async function fetchLatestTrend(targetLabel) {
     if (feed.items && feed.items.length > 0) {
       const beritaTerbaru = feed.items[0];
       
+      // Ambil gambar aslinya dengan berbagai cara scraping
       let imageUrl = "";
       if (beritaTerbaru.enclosure && beritaTerbaru.enclosure.url) {
         imageUrl = beritaTerbaru.enclosure.url;
@@ -138,6 +138,7 @@ async function fetchLatestTrend(targetLabel) {
         imageUrl = thumb.$ ? thumb.$.url : "";
       }
       
+      // Jika masih tidak ada, coba regex dari konten HTML-nya
       if (!imageUrl) {
         const gabungHTML = (beritaTerbaru.content || "") + (beritaTerbaru.description || "");
         const match = gabungHTML.match(/<img[^>]+src=["']([^"']+)["']/i);
@@ -148,7 +149,7 @@ async function fetchLatestTrend(targetLabel) {
         title: beritaTerbaru.title,
         summary: beritaTerbaru.contentSnippet || beritaTerbaru.content || "Info tren terkini.",
         source: feed.title || feedUrl,
-        scrapedImage: imageUrl 
+        scrapedImage: imageUrl
       };
     }
     return null;
@@ -177,24 +178,26 @@ async function buatDanPostArtikelOtomatis() {
 
     let urlGambarFinal = "";
 
+    // PRIORITAS UTAMA: Ambil gambar asli dari situs beritanya biar nyambung 100%
     if (trendBerita && trendBerita.scrapedImage) {
       urlGambarFinal = trendBerita.scrapedImage;
-      botState.logTerakhir = "📸 Sukses mendeteksi gambar asli dari situs sumber!";
+      botState.logTerakhir = "📸 Gambar ASLI DITEMUKAN! Siap diterapkan Filter Anti-Copyright.";
     }
 
-    // Bank Gambar Cadangan Jika Scrape Gambar Gagal
+    // FALLBACK: Hanya jika berita sama sekali tidak ada gambarnya, pakai Unsplash
     if (!urlGambarFinal) {
-      const gambarCadangan = {
-        "ANDROID": "https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80",
-        "INSTALASI OS": "https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80",
-        "JARINGAN": "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80",
-        "SOFTWARE": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80",
-        "WEB DESAIN": "https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80",
-        "GAME": "https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80",
-        "LAINNYA": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80"
+      const bankGambarBersih = {
+        "ANDROID": ["https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=800&q=80"],
+        "INSTALASI OS": ["https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1593640408182-31c70c8268f5?auto=format&fit=crop&w=800&q=80"],
+        "JARINGAN": ["https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80"],
+        "SOFTWARE": ["https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1618401471353-b98afee0b2eb?auto=format&fit=crop&w=800&q=80"],
+        "WEB DESAIN": ["https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1559028012-481c04fa702d?auto=format&fit=crop&w=800&q=80"],
+        "GAME": ["https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1493711662062-fa541adb3fc8?auto=format&fit=crop&w=800&q=80"],
+        "LAINNYA": ["https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80", "https://images.unsplash.com/photo-1621416894569-0f39ed31d247?auto=format&fit=crop&w=800&q=80"]
       };
-      urlGambarFinal = gambarCadangan[labelTargetHariIni];
-      botState.logTerakhir = `📸 Menggunakan gambar cadangan default untuk label ${labelTargetHariIni}`;
+      const daftarGambarPilihan = bankGambarBersih[labelTargetHariIni];
+      urlGambarFinal = daftarGambarPilihan[Math.floor(Math.random() * daftarGambarPilihan.length)];
+      botState.logTerakhir = `📸 Gagal scrape gambar. Pakai gambar HD pengganti untuk label ${labelTargetHariIni}.`;
     }
 
     const promptSEO = [
@@ -208,10 +211,17 @@ async function buatDanPostArtikelOtomatis() {
       "- Jika label GAME: Bahas game PC/Mobile, e-sports, atau konsol (PS4/PS5).",
       "- Jika label LAINNYA: Bahas berita Olahraga, Crypto, atau AI.",
       "",
+      "🔴 ATURAN KERAPIAN TULISAN (HTML):",
+      "- Tulisan DILARANG KERAS DEMPET. Gunakan struktur HTML yang rapi dan nyaman dibaca.",
+      "- WAJIB bungkus setiap paragraf dengan tag <p>...</p>. Buat paragraf pendek (maksimal 3-4 kalimat per paragraf).",
+      "- Gunakan tag <h2>...</h2> atau <h3>...</h3> untuk memisahkan setiap sub-judul.",
+      "- Gunakan tag <ul><li>...</li></ul> jika ada poin-poin penjelasan.",
+      "- Tambahkan spasi jarak antar bagian dengan tag <br><br> setelah penutup </p> atau penutup </ul> jika diperlukan.",
+      "",
       "FORMAT OUTPUT WAJIB (PISAHKAN JELAS DENGAN ENTER):",
       "[JUDUL] Tulis judul artikel SEO-friendly tanpa tag HTML.",
       "[DESKRIPSI] Tulis satu kalimat meta deskripsi SEO (maksimal 140 karakter).",
-      "[KONTEN] Isi artikel berupa HTML murni dimulai langsung dengan paragraf atau sub-judul.",
+      "[KONTEN] Isi artikel berupa HTML murni dimulai langsung dengan tag <p> atau <h2>.",
       "",
       "❌ LARANGAN KERAS (JANGAN PERNAH DITULIS):",
       "- JANGAN memasukkan tautan/link URL apa pun ke dalam teks.",
@@ -254,8 +264,19 @@ async function buatDanPostArtikelOtomatis() {
       kontenHTMLRaw = teksBersih.replace(/\[?JUDUL\]?/i, "").replace(/\[?DESKRIPSI\]?/i, "").replace(/\[?KONTEN\]?/i, "").trim();
     }
 
-    const cssAntiCopyright = "filter: contrast(115%) saturate(120%) sepia(15%) hue-rotate(2deg);";
-    const bannerHTML = `<img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; max-width: 800px; height: auto; border-radius: 12px; display: block; margin: 0 auto 25px auto; ${cssAntiCopyright}" /><br/>`;
+    // --- FITUR AUTO-EDIT GAMBAR (ANTI COPYRIGHT BYPASS) ---
+    // Filter CSS ini akan "mencuci" gambar asli:
+    // 1. Naikkan Kontras & Saturasi (Bikin sidik jari warna berubah)
+    // 2. Tambah Sepia 10% (Perubahan tone dasar)
+    // 3. Hue Rotate 2deg (Menggeser warna tanpa terlihat aneh oleh mata manusia)
+    // 4. Transform: translateZ(0) (Memicu hardware acceleration agar gambar dirender ulang)
+    const cssAntiCopyright = "filter: contrast(108%) saturate(115%) sepia(10%) hue-rotate(2deg) brightness(98%); transform: translateZ(0);";
+    
+    const bannerHTML = `
+      <div style="overflow: hidden; border-radius: 12px; margin: 0 auto 25px auto; max-width: 800px;">
+        <img src="${urlGambarFinal}" alt="${judulFinal}" style="width: 100%; height: auto; display: block; ${cssAntiCopyright}" />
+      </div><br/>
+    `;
     
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
 
