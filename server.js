@@ -57,7 +57,7 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
-// KEMBALI KE KATEGORI AWAL
+// MODIFIKASI: "LAINNYA" diperbanyak agar peluang munculnya AI, Crypto, dan Olahraga menjadi 40%
 const daftarMenuUntukScrape = [
   "ANDROID", 
   "INSTALASI OS", 
@@ -65,6 +65,9 @@ const daftarMenuUntukScrape = [
   "SOFTWARE", 
   "WEB DESAIN", 
   "GAME", 
+  "LAINNYA",
+  "LAINNYA",
+  "LAINNYA",
   "LAINNYA"
 ];
 
