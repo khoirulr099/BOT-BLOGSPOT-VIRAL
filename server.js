@@ -71,7 +71,6 @@ const daftarLabelValidBlogger = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", "LAINNYA"
 ];
 
-// PERBAIKAN: Bank Topik Cadangan Dibuat Dinamis & Banyak Pilihan Biar Gak Bosen
 const fallbackTopik = {
   "ANDROID": [
     "Review HP Android terbaru bulan ini beserta kelebihannya",
@@ -137,10 +136,7 @@ async function fetchLatestTrend(targetKategoriSitus) {
 
   try {
     const listFeeds = targetFeeds[targetKategoriSitus];
-    // PERBAIKAN: Acak urutan website agar tidak melulu website pertama yang dicek
     const shuffledFeeds = listFeeds.sort(() => 0.5 - Math.random());
-    
-    // Ambil history untuk mengecek duplikat
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
 
     for (const feedUrl of shuffledFeeds) {
@@ -148,13 +144,13 @@ async function fetchLatestTrend(targetKategoriSitus) {
       const feed = await parser.parseURL(feedUrl);
       
       if (feed.items && feed.items.length > 0) {
-        // PERBAIKAN: Cari berita SATU PER SATU dari atas ke bawah.
-        // Cek apakah judul berita ini SUDAH PERNAH diposting sebelumnya.
         for (const item of feed.items) {
-          const isAlreadyPosted = riwayatLokal.some(h => h.originalTitle === item.title);
+          const isAlreadyPosted = riwayatLokal.some(h => 
+            (h.originalTitle && h.originalTitle === item.title) || 
+            (h.originalLink && h.originalLink === item.link)
+          );
           
           if (!isAlreadyPosted) {
-            // Berita ini masih FRESH! Ambil datanya.
             let imageUrl = "";
             if (item.enclosure && item.enclosure.url) {
               imageUrl = item.enclosure.url;
@@ -176,6 +172,7 @@ async function fetchLatestTrend(targetKategoriSitus) {
 
             return {
               title: item.title,
+              link: item.link,
               summary: item.contentSnippet || item.content || "Info tren terkini.",
               source: feed.title || feedUrl,
               scrapedImage: imageUrl
@@ -184,7 +181,6 @@ async function fetchLatestTrend(targetKategoriSitus) {
         }
       }
     }
-    // Jika semua website di kategori ini beritanya udah diposting semua, kembalikan null
     console.log(`⚠️ Semua berita RSS di ${targetKategoriSitus} sudah pernah dipost. Beralih ke topik cadangan.`);
     return null; 
   } catch (error) {
@@ -203,17 +199,19 @@ async function buatDanPostArtikelOtomatis() {
     
     let deskripsiArtikel = "";
     let judulBeritaAsli = "";
+    let linkBeritaAsli = "";
     
     if (trendBerita) {
       botState.logTerakhir = `📰 Bahan berita BARU ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Intisari berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
+      linkBeritaAsli = trendBerita.link;
     } else {
-      // PERBAIKAN: Ambil 1 topik acak dari bank cadangan agar tidak berulang
       const arrayTopik = fallbackTopik[kategoriSumberHariIni];
       const topikAcak = arrayTopik[Math.floor(Math.random() * arrayTopik.length)];
       judulBeritaAsli = "Topik Menarik: " + topikAcak;
       deskripsiArtikel = "Buat artikel lengkap, segar, dan mendalam berdasarkan topik ini: " + topikAcak;
+      linkBeritaAsli = "fallback-" + Date.now();
     }
 
     let urlGambarFinal = "";
@@ -223,17 +221,22 @@ async function buatDanPostArtikelOtomatis() {
     }
 
     if (!urlGambarFinal) {
-      const bankGambarBersih = {
-        "ANDROID": ["https://images.unsplash.com/photo-1607252656733-fd7458c631f1?auto=format&fit=crop&w=800&q=80"],
-        "INSTALASI OS": ["https://images.unsplash.com/photo-1629654291663-b91ad427698f?auto=format&fit=crop&w=800&q=80"],
-        "JARINGAN": ["https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=800&q=80"],
-        "SOFTWARE": ["https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=800&q=80"],
-        "WEB DESAIN": ["https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?auto=format&fit=crop&w=800&q=80"],
-        "GAME": ["https://images.unsplash.com/photo-1538481199705-c710c4e965fc?auto=format&fit=crop&w=800&q=80"],
-        "LAINNYA": ["https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80"]
+      // GUDANG GAMBAR UNLIMITED: Memakai AI Image Generator Gratis
+      const kataKunciGambar = {
+        "ANDROID": "modern android smartphone laying on desk, close up tech gadget, high resolution",
+        "INSTALASI OS": "computer screen showing installation progress, modern laptop windows linux os, cinematic light",
+        "JARINGAN": "glowing fiber optic network cables, futuristic server room, cyberpunk technology",
+        "SOFTWARE": "software development code on computer monitor, dark mode hacker terminal workspace",
+        "WEB DESAIN": "ui ux web design layout on monitor, colorful digital workspace, graphic design concept",
+        "GAME": "rgb gaming setup room, mechanical keyboard and mouse, futuristic esports arena",
+        "LAINNYA": "futuristic artificial intelligence glowing brain, blockchain nodes concept, high tech"
       };
-      const daftarGambarPilihan = bankGambarBersih[kategoriSumberHariIni];
-      urlGambarFinal = daftarGambarPilihan[Math.floor(Math.random() * daftarGambarPilihan.length)];
+
+      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology internet concept";
+      const angkaAcak = Math.floor(Math.random() * 9999999);
+      
+      // Link ini akan secara otomatis menggambar gambar baru sesuai prompt dan angka acak setiap kali dipanggil
+      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=800&height=450&nologo=true&seed=${angkaAcak}`;
     }
 
     const promptSEO = [
@@ -341,14 +344,14 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES KONTEN FRESH] Judul: ${judulFinal} | URL: ${postUrl}`;
+    botState.logTerakhir = `🎉 [SUKSES KONTEN FRESH] Judul: ${judulFinal}`;
 
-    // PERBAIKAN: Menyimpan Judul Asli (originalTitle) ke dalam riwayat agar bisa dilacak siklus berikutnya
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
       id: response.data.id,
       title: judulFinal,
       originalTitle: judulBeritaAsli, 
+      originalLink: linkBeritaAsli,
       url: postUrl,
       date: new Date().toLocaleDateString("id-ID"),
       label: arrayLabelBlogger.join(", ")
