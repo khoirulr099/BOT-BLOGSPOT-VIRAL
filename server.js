@@ -57,6 +57,7 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
+// KEMBALI KE KATEGORI AWAL
 const daftarMenuUntukScrape = [
   "ANDROID", 
   "INSTALASI OS", 
@@ -71,6 +72,7 @@ const daftarLabelValidBlogger = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", "LAINNYA"
 ];
 
+// TOPIK CADANGAN DIGABUNG KE DALAM "LAINNYA"
 const fallbackTopik = {
   "ANDROID": [
     "Fitur tersembunyi Android terbaru yang jarang diketahui orang",
@@ -101,7 +103,7 @@ const fallbackTopik = {
     "Aplikasi wajib untuk content creator dengan budget minim"
   ],
   "WEB DESAIN": [
-    "Cara optimasi gambar di website agar loading secepat kilat",
+    "Panduan membangun website top-up game otomatis dengan Tailwind CSS dan Vercel",
     "Prinsip dasar psikologi warna dalam membuat desain website",
     "Tools AI terbaik yang bisa generate kode HTML/CSS otomatis",
     "Panduan membuat animasi CSS mulus tanpa membebani server",
@@ -115,27 +117,44 @@ const fallbackTopik = {
     "Review perlengkapan gaming murah dari brand lokal yang berkualitas"
   ],
   "LAINNYA": [
+    // Topik AI
+    "Perbandingan kemampuan ChatGPT 4o vs Claude 3.5 Sonnet: Mana yang lebih pintar?",
+    "Cara membuat bot otomatis responsif dengan integrasi Gemini API",
+    // Topik Crypto & Web3
+    "Strategi airdrop farming terbaru dan cara memaksimalkan poin di ekosistem Web3",
+    "Perkembangan project DeFi dan integrasi teknologi AI layer di blockchain",
+    // Topik Olahraga
+    "Update bursa transfer pemain sepak bola eropa terbaru dan analisis taktik",
+    "Perkembangan e-sports dan alasan mengapa pro-player layak disebut atlet",
+    // Topik Tekno Lainnya
     "Inovasi baterai solid-state masa depan pengganti lithium",
-    "Dampak nyata kecerdasan buatan (AI) di industri kreatif",
-    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?",
-    "Perkembangan teknologi Augmented Reality (AR) dalam keseharian",
-    "Mengulik cara kerja algoritma sosial media yang bikin kecanduan"
+    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?"
   ]
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
+  // SEMUA RSS FEED BARU MASUK KE KATEGORI "LAINNYA"
   const targetFeeds = {
-    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/", "https://9to5google.com/feed/"],
+    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/"],
     "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
     "JARINGAN": ["https://www.networkworld.com/feed/"],
-    "SOFTWARE": ["https://techcrunch.com/category/software/feed/", "https://www.theverge.com/software/rss/index.xml"],
-    "WEB DESAIN": ["https://css-tricks.com/feed/", "https://tympanus.net/codrops/feed/"],
-    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss", "https://www.polygon.com/rss/index.xml"],
-    "LAINNYA": ["https://www.engadget.com/rss.xml", "https://cointelegraph.com/rss"]
+    "SOFTWARE": ["https://techcrunch.com/category/software/feed/"],
+    "WEB DESAIN": ["https://css-tricks.com/feed/"],
+    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss"],
+    "LAINNYA": [
+      "https://www.engadget.com/rss.xml", // Tekno Umum
+      "https://techcrunch.com/category/artificial-intelligence/feed/", // AI
+      "https://cointelegraph.com/rss", // Crypto
+      "https://decrypt.co/feed", // Crypto
+      "https://www.espn.com/espn/rss/news", // Olahraga
+      "https://sports.yahoo.com/rss/" // Olahraga
+    ]
   };
 
   try {
     const listFeeds = targetFeeds[targetKategoriSitus];
+    if (!listFeeds || listFeeds.length === 0) return null;
+    
     const shuffledFeeds = listFeeds.sort(() => 0.5 - Math.random());
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
 
@@ -190,7 +209,6 @@ async function fetchLatestTrend(targetKategoriSitus) {
 }
 
 async function buatDanPostArtikelOtomatis() {
-  // ACAK TOTAL: Tidak lagi urut, tapi memilih menu secara random setiap jalannya mesin
   const kategoriSumberHariIni = daftarMenuUntukScrape[Math.floor(Math.random() * daftarMenuUntukScrape.length)];
   
   try {
@@ -209,7 +227,6 @@ async function buatDanPostArtikelOtomatis() {
       linkBeritaAsli = trendBerita.link;
     } else {
       const arrayTopik = fallbackTopik[kategoriSumberHariIni];
-      // Ambil topik cadangan lalu tambahkan stempel waktu agar benar-benar dianggap baru oleh AI
       const topikAcak = arrayTopik[Math.floor(Math.random() * arrayTopik.length)];
       judulBeritaAsli = "Membahas Tuntas: " + topikAcak;
       deskripsiArtikel = "Buat artikel lengkap, segar, dan mendalam berdasarkan topik ini: " + topikAcak;
@@ -219,12 +236,11 @@ async function buatDanPostArtikelOtomatis() {
     let urlGambarFinal = "";
 
     if (trendBerita && trendBerita.scrapedImage) {
-      // PERBAIKAN KOMPRESI: Mengubah gambar asli jadi WebP ringan (Lebar 720px, Kualitas 70%) & Menghapus Metadata
       urlGambarFinal = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
     }
 
     if (!urlGambarFinal) {
-      // GUDANG GAMBAR GENERATOR (Tetap ringan karena resolusi dibatasi)
+      // KATA KUNCI GAMBAR DIKEMBALIKAN KE FORMAT AWAL, "LAINNYA" DIBUAT FLEKSIBEL
       const kataKunciGambar = {
         "ANDROID": "modern android smartphone interface, digital glowing screen close up",
         "INSTALASI OS": "computer booting up, operating system loading screen glowing",
@@ -232,7 +248,7 @@ async function buatDanPostArtikelOtomatis() {
         "SOFTWARE": "programming code on dark monitor, high tech software development",
         "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
         "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
-        "LAINNYA": "artificial intelligence glowing chip, modern futuristic tech"
+        "LAINNYA": "modern breaking news concept, artificial intelligence tech, dynamic fast paced digital world"
       };
 
       const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology concept";
@@ -240,13 +256,14 @@ async function buatDanPostArtikelOtomatis() {
       urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
     }
 
+    // LABEL PROMPT SEO DIKEMBALIKAN HANYA MEMILIH 7 KATEGORI UTAMA
     const promptSEO = [
-      "Kamu adalah jurnalis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
+      "Kamu adalah jurnalis dan analis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
       `Topik: "${judulBeritaAsli}"`,
       `Bahan: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
-      "1. Tulislah dari sudut pandang yang 100% BARU dan TAJAM. Jangan ulangi klise atau struktur artikel lama.",
+      "1. Tulislah dari sudut pandang yang 100% BARU, TAJAM, dan mendalam.",
       "2. Buat pembaca merasa 'Wah, ini informasi baru yang penting!'",
       "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
@@ -362,7 +379,6 @@ async function buatDanPostArtikelOtomatis() {
     botState.logTerakhir = `❌ Gagal Posting Siklus [${kategoriSumberHariIni}]: ` + err.message;
   }
 
-  // Update Waktu Post Selanjutnya
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
 
