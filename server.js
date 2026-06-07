@@ -73,64 +73,64 @@ const daftarLabelValidBlogger = [
 
 const fallbackTopik = {
   "ANDROID": [
-    "Review HP Android terbaru bulan ini beserta kelebihannya",
-    "Tips ampuh menghemat baterai HP Android agar awet seharian",
-    "Game Android dengan grafis memukau terbaik tahun ini",
-    "Cara jitu mengatasi memori penyimpanan HP Android yang penuh",
-    "Bocoran rumor HP Android flagship yang akan segera rilis"
+    "Fitur tersembunyi Android terbaru yang jarang diketahui orang",
+    "Komparasi chipset HP Android paling ngebut tahun ini",
+    "Tips ampuh mengembalikan file terhapus di HP Android",
+    "Cara menghilangkan iklan mengganggu di aplikasi Android",
+    "Review jujur UI kustom (MIUI, OneUI, ColorOS) mana yang terbaik?"
   ],
   "INSTALASI OS": [
-    "Panduan lengkap instalasi Windows 11 tanpa kehilangan data",
-    "Kelebihan dan kekurangan menggunakan OS Linux untuk sehari-hari",
-    "Cara mudah mengatasi laptop Windows yang sering Blue Screen",
-    "Alasan mengapa kamu harus upgrade ke SSD sekarang juga",
-    "Tips merawat sistem operasi agar tetap ringan dan ngebut"
+    "Cara cloning OS Windows dari HDD ke SSD tanpa ribet",
+    "Review performa Windows 11 di laptop spesifikasi kentang",
+    "Distro Linux terbaik untuk pemula yang baru pindah dari Windows",
+    "Cara aman dual boot Windows 10 dan 11 di satu laptop",
+    "Solusi ampuh mengatasi error update Windows yang sering nyangkut"
   ],
   "JARINGAN": [
-    "Cara setting router Mikrotik dasar untuk pemula",
-    "Trik memperkuat sinyal WiFi di rumah yang sering ngadat",
-    "Mengenal bahaya public WiFi dan cara melindunginya",
-    "Perbedaan jaringan 4G dan 5G yang wajib kamu tahu",
-    "Cara mengamankan jaringan internet rumah dari hacker"
+    "Perbedaan kabel LAN Cat5e, Cat6, dan Cat7 untuk kecepatan internet",
+    "Cara mudah melacak siapa saja yang numpang WiFi kita",
+    "Mengenal teknologi WiFi 7 dan seberapa cepat performanya",
+    "Konfigurasi DNS tercepat untuk bermain game online anti lag",
+    "Cara bypass blokir internet menggunakan router Mikrotik"
   ],
   "SOFTWARE": [
-    "Review 5 software produktivitas terbaik untuk WFH",
-    "Daftar AI Tools desktop yang bisa mempermudah pekerjaanmu",
-    "Browser alternatif selain Chrome yang lebih ringan dan aman",
-    "Software edit video gratisan PC yang sekelas Adobe Premiere",
-    "Aplikasi wajib install setelah beli laptop baru"
+    "Aplikasi pembersih sampah PC yang benar-benar efektif bukan abal-abal",
+    "Software open source gratis pengganti Microsoft Office",
+    "Rekomendasi antivirus paling ringan yang tidak bikin laptop lelet",
+    "Tool rahasia para teknisi untuk memperbaiki error sistem",
+    "Aplikasi wajib untuk content creator dengan budget minim"
   ],
   "WEB DESAIN": [
-    "Tren UI/UX Design terbaru yang sedang hits di industri kreatif",
-    "Tutorial dasar memahami framework Tailwind CSS dengan mudah",
-    "Kesalahan fatal yang sering dilakukan web designer pemula",
-    "Pentingnya website responsif di era dominasi smartphone",
-    "Daftar font keren dan gratis untuk project web design kamu"
+    "Cara optimasi gambar di website agar loading secepat kilat",
+    "Prinsip dasar psikologi warna dalam membuat desain website",
+    "Tools AI terbaik yang bisa generate kode HTML/CSS otomatis",
+    "Panduan membuat animasi CSS mulus tanpa membebani server",
+    "Struktur navigasi web yang paling disukai oleh algoritma Google"
   ],
   "GAME": [
-    "Review jujur game PC atau konsol AAA yang baru saja rilis",
-    "Tips dan trik push rank e-sports (Valorant/MLBB/PUBG)",
-    "Daftar game indie PC terbaik dengan cerita yang bikin nangis",
-    "Perkembangan teknologi Unreal Engine 5 di industri game",
-    "Rekomendasi perangkat gaming murah meriah namun berkualitas"
+    "Bocoran konsol gaming generasi terbaru yang akan merusak pasar",
+    "Game gratis di Steam yang punya kualitas setara game mahal",
+    "Fenomena game viral bulan ini: Kenapa semua orang memainkannya?",
+    "Cara optimasi settingan grafis game PC agar FPS stabil",
+    "Review perlengkapan gaming murah dari brand lokal yang berkualitas"
   ],
   "LAINNYA": [
-    "Berkembangan teknologi AI dan dampaknya bagi masa depan pekerjaan",
-    "Tren dunia Cryptocurrency dan Web3 minggu ini",
-    "Review gadget unik dan aneh yang ada di pasaran",
-    "Inovasi mobil listrik terbaru dan masa depannya",
-    "Tips menjaga kesehatan mata bagi pekerja yang sering menatap layar"
+    "Inovasi baterai solid-state masa depan pengganti lithium",
+    "Dampak nyata kecerdasan buatan (AI) di industri kreatif",
+    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?",
+    "Perkembangan teknologi Augmented Reality (AR) dalam keseharian",
+    "Mengulik cara kerja algoritma sosial media yang bikin kecanduan"
   ]
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
   const targetFeeds = {
-    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/"],
+    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/", "https://9to5google.com/feed/"],
     "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
     "JARINGAN": ["https://www.networkworld.com/feed/"],
     "SOFTWARE": ["https://techcrunch.com/category/software/feed/", "https://www.theverge.com/software/rss/index.xml"],
     "WEB DESAIN": ["https://css-tricks.com/feed/", "https://tympanus.net/codrops/feed/"],
-    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss"],
+    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss", "https://www.polygon.com/rss/index.xml"],
     "LAINNYA": ["https://www.engadget.com/rss.xml", "https://cointelegraph.com/rss"]
   };
 
@@ -181,7 +181,7 @@ async function fetchLatestTrend(targetKategoriSitus) {
         }
       }
     }
-    console.log(`⚠️ Semua berita RSS di ${targetKategoriSitus} sudah pernah dipost. Beralih ke topik cadangan.`);
+    console.log(`⚠️ Semua berita di ${targetKategoriSitus} sudah diposting. Lanjut ke topik cadangan.`);
     return null; 
   } catch (error) {
     console.error(`Gagal nge-scrape sumber ${targetKategoriSitus}, beralih ke bank topik:`, error.message);
@@ -190,10 +190,11 @@ async function fetchLatestTrend(targetKategoriSitus) {
 }
 
 async function buatDanPostArtikelOtomatis() {
-  const kategoriSumberHariIni = daftarMenuUntukScrape[botState.indeksJadwal];
+  // ACAK TOTAL: Tidak lagi urut, tapi memilih menu secara random setiap jalannya mesin
+  const kategoriSumberHariIni = daftarMenuUntukScrape[Math.floor(Math.random() * daftarMenuUntukScrape.length)];
   
   try {
-    botState.logTerakhir = `🤖 Mencari bahan artikel FRESH dari situs: [${kategoriSumberHariIni}]`;
+    botState.logTerakhir = `🤖 Mencari tren VIRAL acak untuk kategori: [${kategoriSumberHariIni}]`;
     
     const trendBerita = await fetchLatestTrend(kategoriSumberHariIni);
     
@@ -202,14 +203,15 @@ async function buatDanPostArtikelOtomatis() {
     let linkBeritaAsli = "";
     
     if (trendBerita) {
-      botState.logTerakhir = `📰 Bahan berita BARU ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
+      botState.logTerakhir = `📰 Berita VIRAL BARU ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Intisari berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
       linkBeritaAsli = trendBerita.link;
     } else {
       const arrayTopik = fallbackTopik[kategoriSumberHariIni];
+      // Ambil topik cadangan lalu tambahkan stempel waktu agar benar-benar dianggap baru oleh AI
       const topikAcak = arrayTopik[Math.floor(Math.random() * arrayTopik.length)];
-      judulBeritaAsli = "Topik Menarik: " + topikAcak;
+      judulBeritaAsli = "Membahas Tuntas: " + topikAcak;
       deskripsiArtikel = "Buat artikel lengkap, segar, dan mendalam berdasarkan topik ini: " + topikAcak;
       linkBeritaAsli = "fallback-" + Date.now();
     }
@@ -217,52 +219,50 @@ async function buatDanPostArtikelOtomatis() {
     let urlGambarFinal = "";
 
     if (trendBerita && trendBerita.scrapedImage) {
-      urlGambarFinal = "https://wsrv.nl/?url=" + encodeURIComponent(trendBerita.scrapedImage);
+      // PERBAIKAN KOMPRESI: Mengubah gambar asli jadi WebP ringan (Lebar 720px, Kualitas 70%) & Menghapus Metadata
+      urlGambarFinal = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
     }
 
     if (!urlGambarFinal) {
+      // GUDANG GAMBAR GENERATOR (Tetap ringan karena resolusi dibatasi)
       const kataKunciGambar = {
-        "ANDROID": "modern android smartphone laying on desk, close up tech gadget, high resolution",
-        "INSTALASI OS": "computer screen showing installation progress, modern laptop windows linux os, cinematic light",
-        "JARINGAN": "glowing fiber optic network cables, futuristic server room, cyberpunk technology",
-        "SOFTWARE": "software development code on computer monitor, dark mode hacker terminal workspace",
-        "WEB DESAIN": "ui ux web design layout on monitor, colorful digital workspace, graphic design concept",
-        "GAME": "rgb gaming setup room, mechanical keyboard and mouse, futuristic esports arena",
-        "LAINNYA": "futuristic artificial intelligence glowing brain, blockchain nodes concept, high tech"
+        "ANDROID": "modern android smartphone interface, digital glowing screen close up",
+        "INSTALASI OS": "computer booting up, operating system loading screen glowing",
+        "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
+        "SOFTWARE": "programming code on dark monitor, high tech software development",
+        "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
+        "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
+        "LAINNYA": "artificial intelligence glowing chip, modern futuristic tech"
       };
 
-      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology internet concept";
+      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology concept";
       const angkaAcak = Math.floor(Math.random() * 9999999);
-      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=800&height=450&nologo=true&seed=${angkaAcak}`;
+      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
     }
 
     const promptSEO = [
-      "Kamu adalah mesin pembuat artikel otomatis. Bertindaklah seperti jurnalis teknologi senior. DILARANG MERESPON SEBAGAI ASISTEN AI.",
-      `Topik Utama: "${judulBeritaAsli}"`,
-      `Bahan Artikel: ${deskripsiArtikel}`,
+      "Kamu adalah jurnalis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
+      `Topik: "${judulBeritaAsli}"`,
+      `Bahan: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
-      "1. Tulis artikel SEO-friendly yang 100% FRESH dan informatif.",
-      "2. Tentukan 1 hingga 3 LABEL yang Paling Cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
-      "3. WAJIB menggunakan NAMA ASLI dan NYATA untuk semua aplikasi, software, game, alat, atau perusahaan yang dibahas (misal: sebutkan 'WhatsApp', 'Notion', 'Adobe', bukan 'Aplikasi X').",
+      "1. Tulislah dari sudut pandang yang 100% BARU dan TAJAM. Jangan ulangi klise atau struktur artikel lama.",
+      "2. Buat pembaca merasa 'Wah, ini informasi baru yang penting!'",
+      "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
       "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
-      "- DILARANG KERAS menggunakan nama samaran, placeholder, atau teks seperti 'Aplikasi X', 'Nama Disamarkan untuk Keunikan', atau 'Klien Y'.",
-      "- DILARANG KERAS menyertakan sapaan atau basa-basi pembuka/penutup seperti 'Tentu, ini dia', 'Berikut adalah', 'Semoga artikel ini', dll.",
-      "- LANGSUNG mulai output-mu dengan judul artikel, tidak boleh ada kalimat pembuka AI sama sekali.",
+      "- DILARANG KERAS menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', 'Berikut adalah', dll). LANGSUNG MULAI KE JUDUL.",
       "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
       "",
-      "🔴 GAYA PENULISAN:",
-      "- Bawa sudut pandang yang unik agar pembaca merasa artikel ini baru, namun TETAP AKURAT secara fakta teknis.",
-      "- Buat paragraf pendek (maksimal 3-4 kalimat).",
-      "- Gunakan tag <h2>...</h2> atau <h3>...</h3> untuk sub-judul.",
-      "- WAJIB bungkus paragraf dengan tag <p>...</p>.",
+      "🔴 GAYA PENULISAN & FORMAT:",
+      "- Paragraf harus pendek! (Maksimal 3-4 kalimat) agar mudah dibaca di layar HP.",
+      "- Gunakan tag HTML yang rapi (<h2>, <h3>, <p>, <strong>, <ul>, <li>).",
       "",
-      "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis, dan jangan tambah teks lain):",
-      "JUDUL: [Tulis Judul Utuh Disini - Tanpa HTML dan Tanpa titik-titik di akhir]",
+      "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
+      "JUDUL: [Tulis Judul Utuh Disini - Tanpa titik-titik]",
       "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel HTML Disini mulai dari paragraf pertama]"
+      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -320,12 +320,11 @@ async function buatDanPostArtikelOtomatis() {
       kontenHTMLRaw = teksBersih.replace(/JUDUL:\s*[^\n]+/gi, "").replace(/DESKRIPSI:\s*[^\n]+/gi, "").replace(/LABEL:\s*[^\n]+/gi, "").trim();
     }
 
-    // PERBAIKAN EXTRA: Sapu bersih kalimat sapaan AI ("Tentu, ini dia...") jika AI masih ngeyel
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
-        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
+        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
       </div>
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
@@ -345,7 +344,7 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES POST ANTI-BASA-BASI] Judul: ${judulFinal}`;
+    botState.logTerakhir = `🎉 [SUKSES VIRAL & RINGAN] Judul: ${judulFinal}`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
@@ -363,7 +362,7 @@ async function buatDanPostArtikelOtomatis() {
     botState.logTerakhir = `❌ Gagal Posting Siklus [${kategoriSumberHariIni}]: ` + err.message;
   }
 
-  botState.indeksJadwal = (botState.indeksJadwal + 1) % daftarMenuUntukScrape.length;
+  // Update Waktu Post Selanjutnya
   botState.nextPostTime = new Date(Date.now() + JEDA_WAKTU).toLocaleString("id-ID") + " WIB";
 }
 
