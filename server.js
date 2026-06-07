@@ -57,7 +57,7 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
-// MODIFIKASI: "LAINNYA" diperbanyak agar peluang munculnya AI, Crypto, dan Olahraga menjadi 40%
+// MODIFIKASI: "LAINNYA" ditulis 9 kali agar peluang munculnya tepat 60% (9 dari 15)
 const daftarMenuUntukScrape = [
   "ANDROID", 
   "INSTALASI OS", 
@@ -65,6 +65,11 @@ const daftarMenuUntukScrape = [
   "SOFTWARE", 
   "WEB DESAIN", 
   "GAME", 
+  "LAINNYA",
+  "LAINNYA",
+  "LAINNYA",
+  "LAINNYA",
+  "LAINNYA",
   "LAINNYA",
   "LAINNYA",
   "LAINNYA",
@@ -259,7 +264,7 @@ async function buatDanPostArtikelOtomatis() {
       urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
     }
 
-    // LABEL PROMPT SEO DIKEMBALIKAN HANYA MEMILIH 7 KATEGORI UTAMA
+    // LABEL PROMPT SEO SUDAH DIPERKETAT AGAR TIDAK DEMPET & BOCOR
     const promptSEO = [
       "Kamu adalah jurnalis dan analis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
       `Topik: "${judulBeritaAsli}"`,
@@ -271,18 +276,20 @@ async function buatDanPostArtikelOtomatis() {
       "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
       "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
-      "- DILARANG KERAS menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', 'Berikut adalah', dll). LANGSUNG MULAI KE JUDUL.",
+      "- DILARANG menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', dll).",
       "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
+      "- DILARANG mengulang Judul dan Deskripsi di dalam bagian KONTEN.", 
       "",
-      "🔴 GAYA PENULISAN & FORMAT:",
-      "- Paragraf harus pendek! (Maksimal 3-4 kalimat) agar mudah dibaca di layar HP.",
-      "- Gunakan tag HTML yang rapi (<h2>, <h3>, <p>, <strong>, <ul>, <li>).",
+      "🔴 GAYA PENULISAN & FORMAT HTML:",
+      "- Paragraf harus pendek! (Maksimal 3-4 kalimat).",
+      "- WAJIB 100% MENGGUNAKAN TAG HTML (<p>, <h2>, <h3>, <strong>, <ul>, <li>).",
+      "- HARAM HUKUMNYA menulis teks biasa tanpa dibungkus tag HTML. Jika ada teks tanpa tag, layout website akan rusak!",
       "",
       "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
       "JUDUL: [Tulis Judul Utuh Disini - Tanpa titik-titik]",
       "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
+      "KONTEN: [Tulis Seluruh Artikel FULL HTML Disini, langsung mulai dengan tag <h2> atau <p>]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
