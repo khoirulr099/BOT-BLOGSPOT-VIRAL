@@ -221,7 +221,6 @@ async function buatDanPostArtikelOtomatis() {
     }
 
     if (!urlGambarFinal) {
-      // GUDANG GAMBAR UNLIMITED: Memakai AI Image Generator Gratis
       const kataKunciGambar = {
         "ANDROID": "modern android smartphone laying on desk, close up tech gadget, high resolution",
         "INSTALASI OS": "computer screen showing installation progress, modern laptop windows linux os, cinematic light",
@@ -234,37 +233,34 @@ async function buatDanPostArtikelOtomatis() {
 
       const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology internet concept";
       const angkaAcak = Math.floor(Math.random() * 9999999);
-      
-      // Link ini akan secara otomatis menggambar gambar baru sesuai prompt dan angka acak setiap kali dipanggil
       urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=800&height=450&nologo=true&seed=${angkaAcak}`;
     }
 
     const promptSEO = [
-      "Kamu adalah penulis artikel blog teknologi/umum dengan gaya penulisan cerdas, tajam, dan natural sekelas jurnalis senior.",
+      "Kamu adalah mesin pembuat artikel otomatis. Bertindaklah seperti jurnalis teknologi senior. DILARANG MERESPON SEBAGAI ASISTEN AI.",
       `Topik Utama: "${judulBeritaAsli}"`,
       `Bahan Artikel: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
       "1. Tulis artikel SEO-friendly yang 100% FRESH dan informatif.",
-      "2. JANGAN mengulang-ulang narasi atau frasa yang sama secara berlebihan.",
-      "3. Tentukan 1 hingga 3 LABEL yang Paling Cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
+      "2. Tentukan 1 hingga 3 LABEL yang Paling Cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
-      "🔴 ATURAN JUDUL SANGAT KETAT:",
-      "- Buat 1 judul yang UTUH, padat, dan tuntas.",
-      "- DILARANG KERAS memotong judul di tengah jalan.",
-      "- DILARANG KERAS menggunakan tanda titik-titik (elipsis) atau (...) di akhir judul.",
+      "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
+      "- DILARANG KERAS menyertakan sapaan atau basa-basi pembuka/penutup seperti 'Tentu, ini dia', 'Berikut adalah', 'Semoga artikel ini', dll.",
+      "- LANGSUNG mulai output-mu dengan judul artikel, tidak boleh ada kalimat pembuka AI sama sekali.",
+      "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
       "",
-      "🔴 GAYA PENULISAN & SUDUT PANDANG:",
-      "- Bawa sudut pandang/opini yang unik agar pembaca merasa artikel ini baru.",
-      "- Buat paragraf pendek! Maksimal 3-4 kalimat per paragraf agar pembaca tidak lelah.",
+      "🔴 GAYA PENULISAN:",
+      "- Bawa sudut pandang yang unik agar pembaca merasa artikel ini baru.",
+      "- Buat paragraf pendek (maksimal 3-4 kalimat).",
       "- Gunakan tag <h2>...</h2> atau <h3>...</h3> untuk sub-judul.",
-      "- WAJIB bungkus teks dengan tag <p>...</p>.",
+      "- WAJIB bungkus paragraf dengan tag <p>...</p>.",
       "",
-      "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
+      "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis, dan jangan tambah teks lain):",
       "JUDUL: [Tulis Judul Utuh Disini - Tanpa HTML dan Tanpa titik-titik di akhir]",
       "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
+      "KONTEN: [Tulis Seluruh Artikel HTML Disini mulai dari paragraf pertama]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -322,6 +318,9 @@ async function buatDanPostArtikelOtomatis() {
       kontenHTMLRaw = teksBersih.replace(/JUDUL:\s*[^\n]+/gi, "").replace(/DESKRIPSI:\s*[^\n]+/gi, "").replace(/LABEL:\s*[^\n]+/gi, "").trim();
     }
 
+    // PERBAIKAN EXTRA: Sapu bersih kalimat sapaan AI ("Tentu, ini dia...") jika AI masih ngeyel
+    kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
+
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
         <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" style="max-width: 100%; height: auto; display: block; margin: 0 auto;" />
@@ -344,7 +343,7 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES KONTEN FRESH] Judul: ${judulFinal}`;
+    botState.logTerakhir = `🎉 [SUKSES POST ANTI-BASA-BASI] Judul: ${judulFinal}`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
