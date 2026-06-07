@@ -71,14 +71,57 @@ const daftarLabelValidBlogger = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", "LAINNYA"
 ];
 
+// PERBAIKAN: Bank Topik Cadangan Dibuat Dinamis & Banyak Pilihan Biar Gak Bosen
 const fallbackTopik = {
-  "ANDROID": "Review HP Android terbaru, rekomendasi aplikasi Android, atau tips baterai awet.",
-  "INSTALASI OS": "Tutorial instalasi Windows 11, cara dual-boot Linux dan Windows, atau mengatasi Blue Screen.",
-  "JARINGAN": "Cara setting router Mikrotik, memperkuat sinyal WiFi, atau dasar-dasar keamanan jaringan.",
-  "SOFTWARE": "Review software PC terbaru untuk produktivitas (bukan game), update browser, atau AI Tools desktop.",
-  "WEB DESAIN": "Tutorial HTML/CSS, tren UI/UX terkini, atau cara menggunakan framework Tailwind CSS.",
-  "GAME": "Review game PC/Konsol terbaru seperti PS4/PS5, tips push rank e-sports, atau update developer.",
-  "LAINNYA": "Berita olahraga terkini (Sepak bola/MotoGP), tren Crypto/Web3, atau perkembangan teknologi AI."
+  "ANDROID": [
+    "Review HP Android terbaru bulan ini beserta kelebihannya",
+    "Tips ampuh menghemat baterai HP Android agar awet seharian",
+    "Game Android dengan grafis memukau terbaik tahun ini",
+    "Cara jitu mengatasi memori penyimpanan HP Android yang penuh",
+    "Bocoran rumor HP Android flagship yang akan segera rilis"
+  ],
+  "INSTALASI OS": [
+    "Panduan lengkap instalasi Windows 11 tanpa kehilangan data",
+    "Kelebihan dan kekurangan menggunakan OS Linux untuk sehari-hari",
+    "Cara mudah mengatasi laptop Windows yang sering Blue Screen",
+    "Alasan mengapa kamu harus upgrade ke SSD sekarang juga",
+    "Tips merawat sistem operasi agar tetap ringan dan ngebut"
+  ],
+  "JARINGAN": [
+    "Cara setting router Mikrotik dasar untuk pemula",
+    "Trik memperkuat sinyal WiFi di rumah yang sering ngadat",
+    "Mengenal bahaya public WiFi dan cara melindunginya",
+    "Perbedaan jaringan 4G dan 5G yang wajib kamu tahu",
+    "Cara mengamankan jaringan internet rumah dari hacker"
+  ],
+  "SOFTWARE": [
+    "Review 5 software produktivitas terbaik untuk WFH",
+    "Daftar AI Tools desktop yang bisa mempermudah pekerjaanmu",
+    "Browser alternatif selain Chrome yang lebih ringan dan aman",
+    "Software edit video gratisan PC yang sekelas Adobe Premiere",
+    "Aplikasi wajib install setelah beli laptop baru"
+  ],
+  "WEB DESAIN": [
+    "Tren UI/UX Design terbaru yang sedang hits di industri kreatif",
+    "Tutorial dasar memahami framework Tailwind CSS dengan mudah",
+    "Kesalahan fatal yang sering dilakukan web designer pemula",
+    "Pentingnya website responsif di era dominasi smartphone",
+    "Daftar font keren dan gratis untuk project web design kamu"
+  ],
+  "GAME": [
+    "Review jujur game PC atau konsol AAA yang baru saja rilis",
+    "Tips dan trik push rank e-sports (Valorant/MLBB/PUBG)",
+    "Daftar game indie PC terbaik dengan cerita yang bikin nangis",
+    "Perkembangan teknologi Unreal Engine 5 di industri game",
+    "Rekomendasi perangkat gaming murah meriah namun berkualitas"
+  ],
+  "LAINNYA": [
+    "Berkembangan teknologi AI dan dampaknya bagi masa depan pekerjaan",
+    "Tren dunia Cryptocurrency dan Web3 minggu ini",
+    "Review gadget unik dan aneh yang ada di pasaran",
+    "Inovasi mobil listrik terbaru dan masa depannya",
+    "Tips menjaga kesehatan mata bagi pekerja yang sering menatap layar"
+  ]
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
@@ -94,43 +137,56 @@ async function fetchLatestTrend(targetKategoriSitus) {
 
   try {
     const listFeeds = targetFeeds[targetKategoriSitus];
-    const feedUrl = listFeeds[Math.floor(Math.random() * listFeeds.length)];
+    // PERBAIKAN: Acak urutan website agar tidak melulu website pertama yang dicek
+    const shuffledFeeds = listFeeds.sort(() => 0.5 - Math.random());
     
-    console.log(`📡 Scrape sumber acak dari kategori [${targetKategoriSitus}]: ${feedUrl}`);
-    const feed = await parser.parseURL(feedUrl);
-    
-    if (feed.items && feed.items.length > 0) {
-      const beritaTerbaru = feed.items[0];
-      
-      let imageUrl = "";
-      if (beritaTerbaru.enclosure && beritaTerbaru.enclosure.url) {
-        imageUrl = beritaTerbaru.enclosure.url;
-      } else if (beritaTerbaru['media:content']) {
-        const media = beritaTerbaru['media:content'];
-        imageUrl = media.$ ? media.$.url : (Array.isArray(media) && media[0].$ ? media[0].$.url : "");
-      } else if (beritaTerbaru['media:thumbnail']) {
-        const thumb = beritaTerbaru['media:thumbnail'];
-        imageUrl = thumb.$ ? thumb.$.url : "";
-      }
-      
-      if (!imageUrl) {
-        const gabungHTML = (beritaTerbaru.content || "") + (beritaTerbaru.description || "");
-        const match = gabungHTML.match(/<img[^>]+src=["']([^"']+)["']/i);
-        if (match && match[1]) { imageUrl = match[1]; }
-      }
+    // Ambil history untuk mengecek duplikat
+    const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
 
-      if (imageUrl && !imageUrl.startsWith("http")) {
-          imageUrl = ""; 
-      }
+    for (const feedUrl of shuffledFeeds) {
+      console.log(`📡 Scrape sumber acak dari kategori [${targetKategoriSitus}]: ${feedUrl}`);
+      const feed = await parser.parseURL(feedUrl);
+      
+      if (feed.items && feed.items.length > 0) {
+        // PERBAIKAN: Cari berita SATU PER SATU dari atas ke bawah.
+        // Cek apakah judul berita ini SUDAH PERNAH diposting sebelumnya.
+        for (const item of feed.items) {
+          const isAlreadyPosted = riwayatLokal.some(h => h.originalTitle === item.title);
+          
+          if (!isAlreadyPosted) {
+            // Berita ini masih FRESH! Ambil datanya.
+            let imageUrl = "";
+            if (item.enclosure && item.enclosure.url) {
+              imageUrl = item.enclosure.url;
+            } else if (item['media:content']) {
+              const media = item['media:content'];
+              imageUrl = media.$ ? media.$.url : (Array.isArray(media) && media[0].$ ? media[0].$.url : "");
+            } else if (item['media:thumbnail']) {
+              const thumb = item['media:thumbnail'];
+              imageUrl = thumb.$ ? thumb.$.url : "";
+            }
+            
+            if (!imageUrl) {
+              const gabungHTML = (item.content || "") + (item.description || "");
+              const match = gabungHTML.match(/<img[^>]+src=["']([^"']+)["']/i);
+              if (match && match[1]) { imageUrl = match[1]; }
+            }
 
-      return {
-        title: beritaTerbaru.title,
-        summary: beritaTerbaru.contentSnippet || beritaTerbaru.content || "Info tren terkini.",
-        source: feed.title || feedUrl,
-        scrapedImage: imageUrl
-      };
+            if (imageUrl && !imageUrl.startsWith("http")) { imageUrl = ""; }
+
+            return {
+              title: item.title,
+              summary: item.contentSnippet || item.content || "Info tren terkini.",
+              source: feed.title || feedUrl,
+              scrapedImage: imageUrl
+            };
+          }
+        }
+      }
     }
-    return null;
+    // Jika semua website di kategori ini beritanya udah diposting semua, kembalikan null
+    console.log(`⚠️ Semua berita RSS di ${targetKategoriSitus} sudah pernah dipost. Beralih ke topik cadangan.`);
+    return null; 
   } catch (error) {
     console.error(`Gagal nge-scrape sumber ${targetKategoriSitus}, beralih ke bank topik:`, error.message);
     return null;
@@ -141,17 +197,23 @@ async function buatDanPostArtikelOtomatis() {
   const kategoriSumberHariIni = daftarMenuUntukScrape[botState.indeksJadwal];
   
   try {
-    botState.logTerakhir = `🤖 Mencari bahan artikel dari situs terkait: [${kategoriSumberHariIni}]`;
+    botState.logTerakhir = `🤖 Mencari bahan artikel FRESH dari situs: [${kategoriSumberHariIni}]`;
     
     const trendBerita = await fetchLatestTrend(kategoriSumberHariIni);
     
-    let deskripsiArtikel = fallbackTopik[kategoriSumberHariIni];
-    let judulBeritaAsli = "Tren Teknologi Terkini";
+    let deskripsiArtikel = "";
+    let judulBeritaAsli = "";
     
     if (trendBerita) {
-      botState.logTerakhir = `📰 Bahan berita ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
+      botState.logTerakhir = `📰 Bahan berita BARU ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Intisari berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
+    } else {
+      // PERBAIKAN: Ambil 1 topik acak dari bank cadangan agar tidak berulang
+      const arrayTopik = fallbackTopik[kategoriSumberHariIni];
+      const topikAcak = arrayTopik[Math.floor(Math.random() * arrayTopik.length)];
+      judulBeritaAsli = "Topik Menarik: " + topikAcak;
+      deskripsiArtikel = "Buat artikel lengkap, segar, dan mendalam berdasarkan topik ini: " + topikAcak;
     }
 
     let urlGambarFinal = "";
@@ -176,12 +238,13 @@ async function buatDanPostArtikelOtomatis() {
 
     const promptSEO = [
       "Kamu adalah penulis artikel blog teknologi/umum dengan gaya penulisan cerdas, tajam, dan natural sekelas jurnalis senior.",
-      `Topik: "${judulBeritaAsli}"`,
-      `Detail: ${deskripsiArtikel}`,
+      `Topik Utama: "${judulBeritaAsli}"`,
+      `Bahan Artikel: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
-      "1. Tulis artikel SEO-friendly dalam bahasa Indonesia yang menarik dan tidak membosankan.",
-      "2. Tentukan 1 hingga 3 LABEL yang Paling Cocok dari daftar ini: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
+      "1. Tulis artikel SEO-friendly yang 100% FRESH dan informatif.",
+      "2. JANGAN mengulang-ulang narasi atau frasa yang sama secara berlebihan.",
+      "3. Tentukan 1 hingga 3 LABEL yang Paling Cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
       "🔴 ATURAN JUDUL SANGAT KETAT:",
       "- Buat 1 judul yang UTUH, padat, dan tuntas.",
@@ -189,15 +252,10 @@ async function buatDanPostArtikelOtomatis() {
       "- DILARANG KERAS menggunakan tanda titik-titik (elipsis) atau (...) di akhir judul.",
       "",
       "🔴 GAYA PENULISAN & SUDUT PANDANG:",
-      "- JANGAN GENERIK! Gaya penulisan harus DINAMIS dan FLEKSIBEL menyesuaikan topik bahasan.",
-      "- Jika membahas gadget/game, gunakan gaya naratif atau review tajam. Jika membahas tutorial, pastikan to-the-point dan jelas.",
-      "",
-      "🔴 KERAPIAN HTML:",
-      "- WAJIB bungkus SEMUA teks paragraf dengan tag <p>...</p>.",
+      "- Bawa sudut pandang/opini yang unik agar pembaca merasa artikel ini baru.",
       "- Buat paragraf pendek! Maksimal 3-4 kalimat per paragraf agar pembaca tidak lelah.",
       "- Gunakan tag <h2>...</h2> atau <h3>...</h3> untuk sub-judul.",
-      "- Jika ada list, gunakan tag <ul><li>...</li></ul>.",
-      "- Gunakan tag <strong>...</strong> untuk menebalkan kata penting.",
+      "- WAJIB bungkus teks dengan tag <p>...</p>.",
       "",
       "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
       "JUDUL: [Tulis Judul Utuh Disini - Tanpa HTML dan Tanpa titik-titik di akhir]",
@@ -283,12 +341,14 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES KONTEN] Judul Utuh & Gambar Rapi! URL: ${postUrl}`;
+    botState.logTerakhir = `🎉 [SUKSES KONTEN FRESH] Judul: ${judulFinal} | URL: ${postUrl}`;
 
+    // PERBAIKAN: Menyimpan Judul Asli (originalTitle) ke dalam riwayat agar bisa dilacak siklus berikutnya
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
       id: response.data.id,
       title: judulFinal,
+      originalTitle: judulBeritaAsli, 
       url: postUrl,
       date: new Date().toLocaleDateString("id-ID"),
       label: arrayLabelBlogger.join(", ")
