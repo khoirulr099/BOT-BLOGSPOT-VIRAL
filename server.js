@@ -57,7 +57,6 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
-// MODIFIKASI: "LAINNYA" ditulis 9 kali agar peluang munculnya tepat 60% (9 dari 15)
 const daftarMenuUntukScrape = [
   "ANDROID", 
   "INSTALASI OS", 
@@ -65,14 +64,6 @@ const daftarMenuUntukScrape = [
   "SOFTWARE", 
   "WEB DESAIN", 
   "GAME", 
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
-  "LAINNYA",
   "LAINNYA"
 ];
 
@@ -80,7 +71,6 @@ const daftarLabelValidBlogger = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", "LAINNYA"
 ];
 
-// TOPIK CADANGAN DIGABUNG KE DALAM "LAINNYA"
 const fallbackTopik = {
   "ANDROID": [
     "Fitur tersembunyi Android terbaru yang jarang diketahui orang",
@@ -111,7 +101,7 @@ const fallbackTopik = {
     "Aplikasi wajib untuk content creator dengan budget minim"
   ],
   "WEB DESAIN": [
-    "Panduan membangun website top-up game otomatis dengan Tailwind CSS dan Vercel",
+    "Cara optimasi gambar di website agar loading secepat kilat",
     "Prinsip dasar psikologi warna dalam membuat desain website",
     "Tools AI terbaik yang bisa generate kode HTML/CSS otomatis",
     "Panduan membuat animasi CSS mulus tanpa membebani server",
@@ -125,43 +115,27 @@ const fallbackTopik = {
     "Review perlengkapan gaming murah dari brand lokal yang berkualitas"
   ],
   "LAINNYA": [
-    // Topik AI
-    "Perbandingan kemampuan ChatGPT 4o vs Claude 3.5 Sonnet: Mana yang lebih pintar?",
-    "Cara membuat bot otomatis responsif dengan integrasi Gemini API",
-    // Topik Crypto & Web3
-    "Strategi airdrop farming terbaru dan cara memaksimalkan poin di ekosistem Web3",
-    "Perkembangan project DeFi dan integrasi teknologi AI layer di blockchain",
-    // Topik Olahraga
-    "Update bursa transfer pemain sepak bola eropa terbaru dan analisis taktik",
-    "Perkembangan e-sports dan alasan mengapa pro-player layak disebut atlet",
-    // Topik Tekno Lainnya
     "Inovasi baterai solid-state masa depan pengganti lithium",
-    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?"
+    "Dampak nyata kecerdasan buatan (AI) di industri kreatif",
+    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?",
+    "Perkembangan teknologi Augmented Reality (AR) dalam keseharian",
+    "Mengulik cara kerja algoritma sosial media yang bikin kecanduan"
   ]
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
   const targetFeeds = {
-    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/"],
+    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/", "https://9to5google.com/feed/"],
     "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
     "JARINGAN": ["https://www.networkworld.com/feed/"],
-    "SOFTWARE": ["https://techcrunch.com/category/software/feed/"],
-    "WEB DESAIN": ["https://css-tricks.com/feed/"],
-    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss"],
-    "LAINNYA": [
-      "https://www.engadget.com/rss.xml", // Tekno Umum
-      "https://techcrunch.com/category/artificial-intelligence/feed/", // AI
-      "https://cointelegraph.com/rss", // Crypto
-      "https://decrypt.co/feed", // Crypto
-      "https://www.espn.com/espn/rss/news", // Olahraga
-      "https://sports.yahoo.com/rss/" // Olahraga
-    ]
+    "SOFTWARE": ["https://techcrunch.com/category/software/feed/", "https://www.theverge.com/software/rss/index.xml"],
+    "WEB DESAIN": ["https://css-tricks.com/feed/", "https://tympanus.net/codrops/feed/"],
+    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss", "https://www.polygon.com/rss/index.xml"],
+    "LAINNYA": ["https://www.engadget.com/rss.xml", "https://cointelegraph.com/rss"]
   };
 
   try {
     const listFeeds = targetFeeds[targetKategoriSitus];
-    if (!listFeeds || listFeeds.length === 0) return null;
-    
     const shuffledFeeds = listFeeds.sort(() => 0.5 - Math.random());
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
 
@@ -240,76 +214,64 @@ async function buatDanPostArtikelOtomatis() {
       linkBeritaAsli = "fallback-" + Date.now();
     }
 
-    // --- LOGIKA GAMBAR BARU (PRE-LOAD BACKEND NODE.JS) ---
     let urlGambarFinal = "";
-    const kataKunciSerep = {
-      "ANDROID": "modern android smartphone interface, digital glowing screen close up",
-      "INSTALASI OS": "computer booting up, operating system loading screen glowing",
-      "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
-      "SOFTWARE": "programming code on dark monitor, high tech software development",
-      "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
-      "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
-      "LAINNYA": "modern breaking news concept, artificial intelligence tech, dynamic fast paced digital world"
-    };
-    const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
-    const urlGambarSerep = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
 
-    // TAHAP 1: Pengecekan status gambar asli secara gaib (di belakang layar)
-    if (trendBerita && trendBerita.scrapedImage) {
-      const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
+    // 🚀 SISTEM RADAR ANTI GAMBAR BROKEN
+    if (trendBerita && trendBerita.scrapedImage && trendBerita.scrapedImage.startsWith("http")) {
+      urlGambarFinal = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70`;
+      
       try {
-        botState.logTerakhir = "🔍 Memeriksa validitas gambar sumber...";
-        const responseCek = await fetch(wsrvUrl);
-        if (responseCek.ok) {
-          urlGambarFinal = wsrvUrl; // Gambar aman, status HTTP 200
-        } else {
-          urlGambarFinal = urlGambarSerep; // Kena blokir (403 dll), alihkan ke AI
+        // Cek dulu apakah server kompresi berhasil mengambil gambar aslinya (Batas waktu 5 detik)
+        const cekGambar = await fetch(urlGambarFinal, { method: 'HEAD', timeout: 5000 });
+        if (!cekGambar.ok) {
+          throw new Error("Gambar diblokir atau broken (Status " + cekGambar.status + ")");
         }
       } catch (err) {
-        urlGambarFinal = urlGambarSerep; // Jika timeout/error jaringan, alihkan ke AI
-      }
-    } else {
-      urlGambarFinal = urlGambarSerep; // Ini artikel fallback, otomatis pakai AI
-    }
-
-    // TAHAP 2: Pre-load AI (Mencegah bot Blogger ngambek karena nunggu render)
-    if (urlGambarFinal === urlGambarSerep) {
-      try {
-        botState.logTerakhir = "⏳ Merender dan caching gambar AI Pollinations...";
-        const aiResponse = await fetch(urlGambarFinal);
-        await aiResponse.arrayBuffer(); // Menahan eksekusi sampai file gambar 100% jadi
-      } catch (err) {
-        console.log("⚠️ Preload AI terlewati, tapi eksekusi berlanjut.");
+        console.log("⚠️ Gambar sumber rusak/diblokir. Membuang gambar dan beralih ke AI Generator.");
+        urlGambarFinal = ""; // Kosongkan agar AI Generator otomatis mengambil alih
       }
     }
-    // --------------------------------------------------------
 
-    // LABEL PROMPT SEO SUDAH DIPERKETAT AGAR TIDAK DEMPET & BOCOR
+    // GUDANG GAMBAR GENERATOR AI (Akan menyala jika gambar sumber kosong / diblokir / error)
+    if (!urlGambarFinal) {
+      const kataKunciGambar = {
+        "ANDROID": "modern android smartphone interface, digital glowing screen close up",
+        "INSTALASI OS": "computer booting up, operating system loading screen glowing",
+        "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
+        "SOFTWARE": "programming code on dark monitor, high tech software development",
+        "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
+        "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
+        "LAINNYA": "artificial intelligence glowing chip, modern futuristic tech"
+      };
+
+      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology concept";
+      const angkaAcak = Math.floor(Math.random() * 9999999);
+      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
+    }
+
     const promptSEO = [
-      "Kamu adalah jurnalis dan analis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
+      "Kamu adalah jurnalis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
       `Topik: "${judulBeritaAsli}"`,
       `Bahan: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
-      "1. Tulislah dari sudut pandang yang 100% BARU, TAJAM, dan mendalam.",
+      "1. Tulislah dari sudut pandang yang 100% BARU dan TAJAM. Jangan ulangi klise atau struktur artikel lama.",
       "2. Buat pembaca merasa 'Wah, ini informasi baru yang penting!'",
       "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
       "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
-      "- DILARANG menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', dll).",
+      "- DILARANG KERAS menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', 'Berikut adalah', dll). LANGSUNG MULAI KE JUDUL.",
       "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
-      "- DILARANG mengulang Judul dan Deskripsi di dalam bagian KONTEN.", 
       "",
-      "🔴 GAYA PENULISAN & FORMAT HTML:",
-      "- Paragraf harus pendek! (Maksimal 3-4 kalimat).",
-      "- WAJIB 100% MENGGUNAKAN TAG HTML (<p>, <h2>, <h3>, <strong>, <ul>, <li>).",
-      "- HARAM HUKUMNYA menulis teks biasa tanpa dibungkus tag HTML. Jika ada teks tanpa tag, layout website akan rusak!",
+      "🔴 GAYA PENULISAN & FORMAT:",
+      "- Paragraf harus pendek! (Maksimal 3-4 kalimat) agar mudah dibaca di layar HP.",
+      "- Gunakan tag HTML yang rapi (<h2>, <h3>, <p>, <strong>, <ul>, <li>).",
       "",
       "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
       "JUDUL: [Tulis Judul Utuh Disini - Tanpa titik-titik]",
       "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel FULL HTML Disini, langsung mulai dengan tag <h2> atau <p>]"
+      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -369,7 +331,6 @@ async function buatDanPostArtikelOtomatis() {
 
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
-    // HTML Banner bersih, tidak butuh onerror karena sudah di-filter di Node.js
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
         <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
@@ -392,7 +353,7 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES VIRAL & RINGAN] Judul: ${judulFinal}`;
+    botState.logTerakhir = `🎉 [SUKSES - GAMBAR VALID] Judul: ${judulFinal}`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
