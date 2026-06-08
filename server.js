@@ -349,9 +349,23 @@ async function buatDanPostArtikelOtomatis() {
 
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
+    // PENAMBAHAN FITUR: Siapkan gambar AI sebagai "ban serep" kalau gambar sumber di-blokir Cloudflare/Anti-Hotlink
+    const kataKunciSerep = {
+      "ANDROID": "modern android smartphone interface, digital glowing screen close up",
+      "INSTALASI OS": "computer booting up, operating system loading screen glowing",
+      "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
+      "SOFTWARE": "programming code on dark monitor, high tech software development",
+      "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
+      "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
+      "LAINNYA": "modern breaking news concept, dynamic fast paced digital world"
+    };
+    const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
+    const urlGambarSerep = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
+
+    // FITUR ONERROR: Jika src utama gagal load, otomatis pindah ke src serep (AI Pollinations)
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
-        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
+        <img src="${urlGambarFinal}" onerror="this.onerror=null; this.src='${urlGambarSerep}';" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
       </div>
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
