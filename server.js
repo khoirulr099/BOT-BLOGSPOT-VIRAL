@@ -141,7 +141,6 @@ const fallbackTopik = {
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
-  // SEMUA RSS FEED BARU MASUK KE KATEGORI "LAINNYA"
   const targetFeeds = {
     "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/"],
     "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
@@ -241,28 +240,49 @@ async function buatDanPostArtikelOtomatis() {
       linkBeritaAsli = "fallback-" + Date.now();
     }
 
+    // --- LOGIKA GAMBAR BARU (PRE-LOAD BACKEND NODE.JS) ---
     let urlGambarFinal = "";
+    const kataKunciSerep = {
+      "ANDROID": "modern android smartphone interface, digital glowing screen close up",
+      "INSTALASI OS": "computer booting up, operating system loading screen glowing",
+      "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
+      "SOFTWARE": "programming code on dark monitor, high tech software development",
+      "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
+      "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
+      "LAINNYA": "modern breaking news concept, artificial intelligence tech, dynamic fast paced digital world"
+    };
+    const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
+    const urlGambarSerep = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
 
+    // TAHAP 1: Pengecekan status gambar asli secara gaib (di belakang layar)
     if (trendBerita && trendBerita.scrapedImage) {
-      urlGambarFinal = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
+      const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
+      try {
+        botState.logTerakhir = "🔍 Memeriksa validitas gambar sumber...";
+        const responseCek = await fetch(wsrvUrl);
+        if (responseCek.ok) {
+          urlGambarFinal = wsrvUrl; // Gambar aman, status HTTP 200
+        } else {
+          urlGambarFinal = urlGambarSerep; // Kena blokir (403 dll), alihkan ke AI
+        }
+      } catch (err) {
+        urlGambarFinal = urlGambarSerep; // Jika timeout/error jaringan, alihkan ke AI
+      }
+    } else {
+      urlGambarFinal = urlGambarSerep; // Ini artikel fallback, otomatis pakai AI
     }
 
-    if (!urlGambarFinal) {
-      // KATA KUNCI GAMBAR DIKEMBALIKAN KE FORMAT AWAL, "LAINNYA" DIBUAT FLEKSIBEL
-      const kataKunciGambar = {
-        "ANDROID": "modern android smartphone interface, digital glowing screen close up",
-        "INSTALASI OS": "computer booting up, operating system loading screen glowing",
-        "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
-        "SOFTWARE": "programming code on dark monitor, high tech software development",
-        "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
-        "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
-        "LAINNYA": "modern breaking news concept, artificial intelligence tech, dynamic fast paced digital world"
-      };
-
-      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology concept";
-      const angkaAcak = Math.floor(Math.random() * 9999999);
-      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
+    // TAHAP 2: Pre-load AI (Mencegah bot Blogger ngambek karena nunggu render)
+    if (urlGambarFinal === urlGambarSerep) {
+      try {
+        botState.logTerakhir = "⏳ Merender dan caching gambar AI Pollinations...";
+        const aiResponse = await fetch(urlGambarFinal);
+        await aiResponse.arrayBuffer(); // Menahan eksekusi sampai file gambar 100% jadi
+      } catch (err) {
+        console.log("⚠️ Preload AI terlewati, tapi eksekusi berlanjut.");
+      }
     }
+    // --------------------------------------------------------
 
     // LABEL PROMPT SEO SUDAH DIPERKETAT AGAR TIDAK DEMPET & BOCOR
     const promptSEO = [
@@ -349,23 +369,10 @@ async function buatDanPostArtikelOtomatis() {
 
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
-    // PENAMBAHAN FITUR: Siapkan gambar AI sebagai "ban serep" kalau gambar sumber di-blokir Cloudflare/Anti-Hotlink
-    const kataKunciSerep = {
-      "ANDROID": "modern android smartphone interface, digital glowing screen close up",
-      "INSTALASI OS": "computer booting up, operating system loading screen glowing",
-      "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
-      "SOFTWARE": "programming code on dark monitor, high tech software development",
-      "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
-      "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
-      "LAINNYA": "modern breaking news concept, dynamic fast paced digital world"
-    };
-    const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
-    const urlGambarSerep = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
-
-    // FITUR ONERROR: Jika src utama gagal load, otomatis pindah ke src serep (AI Pollinations)
+    // HTML Banner bersih, tidak butuh onerror karena sudah di-filter di Node.js
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
-        <img src="${urlGambarFinal}" onerror="this.onerror=null; this.src='${urlGambarSerep}';" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
+        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
       </div>
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
