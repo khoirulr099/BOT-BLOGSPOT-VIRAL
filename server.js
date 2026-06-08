@@ -42,6 +42,8 @@ let botState = {
   indeksJadwal: 0,
   logTerakhir: "Sistem Control Center Siap. Menunggu perintah jalankan mesin.",
   activeProfileName: "Belum Ada (Menggunakan Default .env)",
+  // FITUR BARU: Melacak bahasa giliran selanjutnya (ID atau EN)
+  giliranBahasaSelanjutnya: "ID", 
   config: {
     apiKey: process.env.GEMINI_API_KEY || "",
     baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -57,7 +59,7 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
-// Probabilitas 60% untuk topik Trending (AI, Crypto, Olahraga)
+// Probabilitas 60% untuk topik Trending
 const daftarMenuUntukScrape = [
   "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", 
   "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA"
@@ -189,10 +191,8 @@ async function fetchLatestTrend(targetKategoriSitus) {
         }
       }
     }
-    console.log(`⚠️ Semua berita di ${targetKategoriSitus} sudah diposting. Lanjut ke topik cadangan.`);
     return null; 
   } catch (error) {
-    console.error(`Gagal nge-scrape sumber ${targetKategoriSitus}, beralih ke bank topik:`, error.message);
     return null;
   }
 }
@@ -200,8 +200,15 @@ async function fetchLatestTrend(targetKategoriSitus) {
 async function buatDanPostArtikelOtomatis() {
   const kategoriSumberHariIni = daftarMenuUntukScrape[Math.floor(Math.random() * daftarMenuUntukScrape.length)];
   
+  // PENENTUAN BAHASA SELANG-SELING
+  const modeBahasa = botState.giliranBahasaSelanjutnya;
+  const targetBahasa = modeBahasa === "EN" ? "INGGRIS (ENGLISH)" : "INDONESIA";
+  
+  // Tukar giliran untuk siklus berikutnya
+  botState.giliranBahasaSelanjutnya = modeBahasa === "ID" ? "EN" : "ID";
+
   try {
-    botState.logTerakhir = `🤖 Mencari tren VIRAL acak untuk kategori: [${kategoriSumberHariIni}]`;
+    botState.logTerakhir = `🤖 Meracik artikel [${kategoriSumberHariIni}] dalam bahasa ${targetBahasa}...`;
     
     const trendBerita = await fetchLatestTrend(kategoriSumberHariIni);
     
@@ -210,7 +217,6 @@ async function buatDanPostArtikelOtomatis() {
     let linkBeritaAsli = "";
     
     if (trendBerita) {
-      botState.logTerakhir = `📰 Berita VIRAL BARU ditemukan dari [${trendBerita.source}]: ${trendBerita.title}`;
       deskripsiArtikel = `Intisari berita: ${trendBerita.summary}`;
       judulBeritaAsli = trendBerita.title;
       linkBeritaAsli = trendBerita.link;
@@ -223,7 +229,6 @@ async function buatDanPostArtikelOtomatis() {
     }
 
     // --- LOGIKA GAMBAR TAHAP DEWA (3 LAPIS PERTAHANAN) ---
-    // LAPIS 3: Failsafe mutlak jika semuanya gagal
     let urlGambarFinal = `https://placehold.co/720x405/1a1a1a/ffffff.png?text=TECH+UPDATE`;
     let isImageSecured = false;
 
@@ -239,35 +244,26 @@ async function buatDanPostArtikelOtomatis() {
     const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
     const urlPollinations = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
 
-    // LAPIS 1: Coba gambar asli RSS
     if (trendBerita && trendBerita.scrapedImage) {
       const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
       try {
-        botState.logTerakhir = "🔍 Memeriksa tipe asli gambar sumber...";
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 4000); 
-        
         const responseCek = await fetch(wsrvUrl, { signal: controller.signal });
         clearTimeout(timeout);
         
         const contentType = responseCek.headers.get("content-type");
-        // Pastikan response benar-benar image, BUKAN halaman error html Cloudflare!
         if (responseCek.ok && contentType && contentType.includes("image")) {
           urlGambarFinal = wsrvUrl;
           isImageSecured = true;
         }
-      } catch (err) {
-        console.log("Gambar asli diblokir/timeout. Lanjut ke AI.");
-      }
+      } catch (err) {}
     }
 
-    // LAPIS 2: Jika gambar asli error/kosong, paksa render AI
     if (!isImageSecured) {
       try {
-        botState.logTerakhir = "⏳ Menggambar AI Pollinations...";
         const controllerAI = new AbortController();
         const timeoutAI = setTimeout(() => controllerAI.abort(), 8000); 
-        
         const responseAI = await fetch(urlPollinations, { signal: controllerAI.signal });
         clearTimeout(timeoutAI);
         
@@ -275,13 +271,11 @@ async function buatDanPostArtikelOtomatis() {
         if (responseAI.ok && contentTypeAI && contentTypeAI.includes("image")) {
           urlGambarFinal = urlPollinations;
         }
-      } catch (err) {
-        console.log("AI gagal merender. Memakai gambar failsafe statis.");
-      }
+      } catch (err) {}
     }
     // --------------------------------------------------------
 
-    // LABEL PROMPT SEO ANTI DEMPET
+    // PROMPT SEO DENGAN INJEKSI BAHASA DINAMIS
     const promptSEO = [
       "Kamu adalah jurnalis dan analis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
       `Topik: "${judulBeritaAsli}"`,
@@ -289,10 +283,10 @@ async function buatDanPostArtikelOtomatis() {
       "",
       "TUGAS UTAMA:",
       "1. Tulislah dari sudut pandang yang 100% BARU, TAJAM, dan mendalam.",
-      "2. Buat pembaca merasa 'Wah, ini informasi baru yang penting!'",
+      `2. WAJIB TULIS ISI KESELURUHAN ARTIKEL (JUDUL, DESKRIPSI, KONTEN) DALAM BAHASA **${targetBahasa}** DENGAN GAYA BAHASA NATURAL.`,
       "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
-      "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
+      "🔴 LARANGAN KERAS & MUTLAK:",
       "- DILARANG menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', dll).",
       "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
       "- DILARANG mengulang Judul dan Deskripsi di dalam bagian KONTEN.", 
@@ -300,13 +294,13 @@ async function buatDanPostArtikelOtomatis() {
       "🔴 GAYA PENULISAN & FORMAT HTML:",
       "- Paragraf harus pendek! (Maksimal 3-4 kalimat).",
       "- WAJIB 100% MENGGUNAKAN TAG HTML (<p>, <h2>, <h3>, <strong>, <ul>, <li>).",
-      "- HARAM HUKUMNYA menulis teks biasa tanpa dibungkus tag HTML. Jika ada teks tanpa tag, layout website akan rusak!",
+      "- HARAM HUKUMNYA menulis teks biasa tanpa dibungkus tag HTML.",
       "",
-      "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
-      "JUDUL: [Tulis Judul Utuh Disini - Tanpa titik-titik]",
-      "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
+      "🔴 FORMAT OUTPUT WAJIB (Pertahankan tag 'JUDUL:', 'DESKRIPSI:', 'LABEL:', 'KONTEN:' agar bot bisa membaca, HANYA ISINYA SAJA YANG DITERJEMAHKAN):",
+      `JUDUL: [Tulis Judul Utuh Disini dalam bahasa ${targetBahasa} - Tanpa titik-titik]`,
+      `DESKRIPSI: [Tulis Meta Deskripsi Singkat dalam bahasa ${targetBahasa}]`,
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel FULL HTML Disini, langsung mulai dengan tag <h2> atau <p>]"
+      `KONTEN: [Tulis Seluruh Artikel FULL HTML Disini dalam bahasa ${targetBahasa}, langsung mulai dengan tag <h2> atau <p>]`
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -366,7 +360,6 @@ async function buatDanPostArtikelOtomatis() {
 
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
-    // FIX FATAL BLOGGER: Ubah "&" jadi "&amp;" agar XML parser Blogger tidak memotong URL
     const safeUrlForHtml = urlGambarFinal.replace(/&/g, '&amp;');
 
     const bannerHTML = `
@@ -391,7 +384,7 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES VIRAL & RINGAN] Judul: ${judulFinal}`;
+    botState.logTerakhir = `🎉 [SUKSES - ${modeBahasa}] Judul: ${judulFinal.substring(0, 40)}...`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
