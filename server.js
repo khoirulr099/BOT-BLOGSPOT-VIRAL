@@ -57,14 +57,10 @@ let botState = {
 let botIntervalObject = null;
 const JEDA_WAKTU = 3 * 60 * 60 * 1000;
 
+// Probabilitas 60% untuk topik Trending (AI, Crypto, Olahraga)
 const daftarMenuUntukScrape = [
-  "ANDROID", 
-  "INSTALASI OS", 
-  "JARINGAN", 
-  "SOFTWARE", 
-  "WEB DESAIN", 
-  "GAME", 
-  "LAINNYA"
+  "ANDROID", "INSTALASI OS", "JARINGAN", "SOFTWARE", "WEB DESAIN", "GAME", 
+  "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA", "LAINNYA"
 ];
 
 const daftarLabelValidBlogger = [
@@ -101,7 +97,7 @@ const fallbackTopik = {
     "Aplikasi wajib untuk content creator dengan budget minim"
   ],
   "WEB DESAIN": [
-    "Cara optimasi gambar di website agar loading secepat kilat",
+    "Panduan membangun website top-up game otomatis dengan Tailwind CSS dan Vercel",
     "Prinsip dasar psikologi warna dalam membuat desain website",
     "Tools AI terbaik yang bisa generate kode HTML/CSS otomatis",
     "Panduan membuat animasi CSS mulus tanpa membebani server",
@@ -115,27 +111,39 @@ const fallbackTopik = {
     "Review perlengkapan gaming murah dari brand lokal yang berkualitas"
   ],
   "LAINNYA": [
+    "Perbandingan kemampuan ChatGPT 4o vs Claude 3.5 Sonnet: Mana yang lebih pintar?",
+    "Cara membuat bot otomatis responsif dengan integrasi Gemini API",
+    "Strategi airdrop farming terbaru dan cara memaksimalkan poin di ekosistem Web3",
+    "Perkembangan project DeFi dan integrasi teknologi AI layer di blockchain",
+    "Update bursa transfer pemain sepak bola eropa terbaru dan analisis taktik",
+    "Perkembangan e-sports dan alasan mengapa pro-player layak disebut atlet",
     "Inovasi baterai solid-state masa depan pengganti lithium",
-    "Dampak nyata kecerdasan buatan (AI) di industri kreatif",
-    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?",
-    "Perkembangan teknologi Augmented Reality (AR) dalam keseharian",
-    "Mengulik cara kerja algoritma sosial media yang bikin kecanduan"
+    "Tren gadget wearable: Apakah smartwatch benar-benar dibutuhkan?"
   ]
 };
 
 async function fetchLatestTrend(targetKategoriSitus) {
   const targetFeeds = {
-    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/", "https://9to5google.com/feed/"],
+    "ANDROID": ["https://www.androidauthority.com/feed/", "https://www.androidpolice.com/feed/"],
     "INSTALASI OS": ["https://www.windowscentral.com/rss", "https://betanews.com/feed/"],
     "JARINGAN": ["https://www.networkworld.com/feed/"],
-    "SOFTWARE": ["https://techcrunch.com/category/software/feed/", "https://www.theverge.com/software/rss/index.xml"],
-    "WEB DESAIN": ["https://css-tricks.com/feed/", "https://tympanus.net/codrops/feed/"],
-    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss", "https://www.polygon.com/rss/index.xml"],
-    "LAINNYA": ["https://www.engadget.com/rss.xml", "https://cointelegraph.com/rss"]
+    "SOFTWARE": ["https://techcrunch.com/category/software/feed/"],
+    "WEB DESAIN": ["https://css-tricks.com/feed/"],
+    "GAME": ["https://feeds.feedburner.com/ign/news", "https://kotaku.com/rss"],
+    "LAINNYA": [
+      "https://www.engadget.com/rss.xml",
+      "https://techcrunch.com/category/artificial-intelligence/feed/",
+      "https://cointelegraph.com/rss",
+      "https://decrypt.co/feed",
+      "https://www.espn.com/espn/rss/news",
+      "https://sports.yahoo.com/rss/"
+    ]
   };
 
   try {
     const listFeeds = targetFeeds[targetKategoriSitus];
+    if (!listFeeds || listFeeds.length === 0) return null;
+    
     const shuffledFeeds = listFeeds.sort(() => 0.5 - Math.random());
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
 
@@ -214,64 +222,91 @@ async function buatDanPostArtikelOtomatis() {
       linkBeritaAsli = "fallback-" + Date.now();
     }
 
-    let urlGambarFinal = "";
+    // --- LOGIKA GAMBAR TAHAP DEWA (3 LAPIS PERTAHANAN) ---
+    // LAPIS 3: Failsafe mutlak jika semuanya gagal
+    let urlGambarFinal = `https://placehold.co/720x405/1a1a1a/ffffff.png?text=TECH+UPDATE`;
+    let isImageSecured = false;
 
-    // 🚀 SISTEM RADAR ANTI GAMBAR BROKEN
-    if (trendBerita && trendBerita.scrapedImage && trendBerita.scrapedImage.startsWith("http")) {
-      urlGambarFinal = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70`;
-      
+    const kataKunciSerep = {
+      "ANDROID": "modern android smartphone interface, digital glowing screen close up",
+      "INSTALASI OS": "computer booting up, operating system loading screen glowing",
+      "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
+      "SOFTWARE": "programming code on dark monitor, high tech software development",
+      "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
+      "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
+      "LAINNYA": "modern breaking news concept, artificial intelligence tech, dynamic fast paced digital world"
+    };
+    const promptSerep = kataKunciSerep[kategoriSumberHariIni] || "modern technology concept";
+    const urlPollinations = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptSerep)}?width=720&height=405&nologo=true&seed=${Math.floor(Math.random() * 9999999)}`;
+
+    // LAPIS 1: Coba gambar asli RSS
+    if (trendBerita && trendBerita.scrapedImage) {
+      const wsrvUrl = `https://wsrv.nl/?url=${encodeURIComponent(trendBerita.scrapedImage)}&w=720&output=webp&q=70&il`;
       try {
-        // Cek dulu apakah server kompresi berhasil mengambil gambar aslinya (Batas waktu 5 detik)
-        const cekGambar = await fetch(urlGambarFinal, { method: 'HEAD', timeout: 5000 });
-        if (!cekGambar.ok) {
-          throw new Error("Gambar diblokir atau broken (Status " + cekGambar.status + ")");
+        botState.logTerakhir = "🔍 Memeriksa tipe asli gambar sumber...";
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 4000); 
+        
+        const responseCek = await fetch(wsrvUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        
+        const contentType = responseCek.headers.get("content-type");
+        // Pastikan response benar-benar image, BUKAN halaman error html Cloudflare!
+        if (responseCek.ok && contentType && contentType.includes("image")) {
+          urlGambarFinal = wsrvUrl;
+          isImageSecured = true;
         }
       } catch (err) {
-        console.log("⚠️ Gambar sumber rusak/diblokir. Membuang gambar dan beralih ke AI Generator.");
-        urlGambarFinal = ""; // Kosongkan agar AI Generator otomatis mengambil alih
+        console.log("Gambar asli diblokir/timeout. Lanjut ke AI.");
       }
     }
 
-    // GUDANG GAMBAR GENERATOR AI (Akan menyala jika gambar sumber kosong / diblokir / error)
-    if (!urlGambarFinal) {
-      const kataKunciGambar = {
-        "ANDROID": "modern android smartphone interface, digital glowing screen close up",
-        "INSTALASI OS": "computer booting up, operating system loading screen glowing",
-        "JARINGAN": "abstract glowing fiber optic internet cables, data center lights",
-        "SOFTWARE": "programming code on dark monitor, high tech software development",
-        "WEB DESAIN": "ui ux modern web design layout on screen, vibrant colors",
-        "GAME": "esports gaming keyboard and mouse glowing rgb, cinematic setup",
-        "LAINNYA": "artificial intelligence glowing chip, modern futuristic tech"
-      };
-
-      const promptGambar = kataKunciGambar[kategoriSumberHariIni] || "modern technology concept";
-      const angkaAcak = Math.floor(Math.random() * 9999999);
-      urlGambarFinal = `https://image.pollinations.ai/prompt/${encodeURIComponent(promptGambar)}?width=720&height=405&nologo=true&seed=${angkaAcak}`;
+    // LAPIS 2: Jika gambar asli error/kosong, paksa render AI
+    if (!isImageSecured) {
+      try {
+        botState.logTerakhir = "⏳ Menggambar AI Pollinations...";
+        const controllerAI = new AbortController();
+        const timeoutAI = setTimeout(() => controllerAI.abort(), 8000); 
+        
+        const responseAI = await fetch(urlPollinations, { signal: controllerAI.signal });
+        clearTimeout(timeoutAI);
+        
+        const contentTypeAI = responseAI.headers.get("content-type");
+        if (responseAI.ok && contentTypeAI && contentTypeAI.includes("image")) {
+          urlGambarFinal = urlPollinations;
+        }
+      } catch (err) {
+        console.log("AI gagal merender. Memakai gambar failsafe statis.");
+      }
     }
+    // --------------------------------------------------------
 
+    // LABEL PROMPT SEO ANTI DEMPET
     const promptSEO = [
-      "Kamu adalah jurnalis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
+      "Kamu adalah jurnalis dan analis teknologi senior yang sedang menulis artikel tentang topik yang sedang VIRAL dan TRENDING hari ini. DILARANG MERESPON SEBAGAI AI.",
       `Topik: "${judulBeritaAsli}"`,
       `Bahan: ${deskripsiArtikel}`,
       "",
       "TUGAS UTAMA:",
-      "1. Tulislah dari sudut pandang yang 100% BARU dan TAJAM. Jangan ulangi klise atau struktur artikel lama.",
+      "1. Tulislah dari sudut pandang yang 100% BARU, TAJAM, dan mendalam.",
       "2. Buat pembaca merasa 'Wah, ini informasi baru yang penting!'",
       "3. Tentukan 1 hingga 3 LABEL yang paling cocok: [ANDROID, INSTALASI OS, JARINGAN, SOFTWARE, WEB DESAIN, GAME, LAINNYA].",
       "",
       "🔴 LARANGAN KERAS & MUTLAK (SANGAT PENTING):",
-      "- DILARANG KERAS menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', 'Berikut adalah', dll). LANGSUNG MULAI KE JUDUL.",
+      "- DILARANG menyertakan basa-basi sapaan (contoh: 'Tentu, ini artikelnya', dll).",
       "- DILARANG memotong judul di tengah jalan. Jangan gunakan elipsis (...) di akhir judul.",
+      "- DILARANG mengulang Judul dan Deskripsi di dalam bagian KONTEN.", 
       "",
-      "🔴 GAYA PENULISAN & FORMAT:",
-      "- Paragraf harus pendek! (Maksimal 3-4 kalimat) agar mudah dibaca di layar HP.",
-      "- Gunakan tag HTML yang rapi (<h2>, <h3>, <p>, <strong>, <ul>, <li>).",
+      "🔴 GAYA PENULISAN & FORMAT HTML:",
+      "- Paragraf harus pendek! (Maksimal 3-4 kalimat).",
+      "- WAJIB 100% MENGGUNAKAN TAG HTML (<p>, <h2>, <h3>, <strong>, <ul>, <li>).",
+      "- HARAM HUKUMNYA menulis teks biasa tanpa dibungkus tag HTML. Jika ada teks tanpa tag, layout website akan rusak!",
       "",
       "🔴 FORMAT OUTPUT WAJIB (Ikuti 4 baris ini persis):",
       "JUDUL: [Tulis Judul Utuh Disini - Tanpa titik-titik]",
       "DESKRIPSI: [Tulis Meta Deskripsi Singkat]",
       "LABEL: [Pilih 1-3 label, pisahkan koma]",
-      "KONTEN: [Tulis Seluruh Artikel HTML Disini]"
+      "KONTEN: [Tulis Seluruh Artikel FULL HTML Disini, langsung mulai dengan tag <h2> atau <p>]"
     ].join("\n");
     
     const resText = await fetch(botState.config.baseUrl.replace(/\/$/, "") + "/chat/completions", {
@@ -331,9 +366,12 @@ async function buatDanPostArtikelOtomatis() {
 
     kontenHTMLRaw = kontenHTMLRaw.replace(/^(<p>)?\s*(Tentu|Berikut|Baik|Baiklah|Tentu saja|Ini dia)[\s\S]*?(minta|artikel|berikut|menulis).*?(:|<\/p>|<br>)/i, "").trim();
 
+    // FIX FATAL BLOGGER: Ubah "&" jadi "&amp;" agar XML parser Blogger tidak memotong URL
+    const safeUrlForHtml = urlGambarFinal.replace(/&/g, '&amp;');
+
     const bannerHTML = `
       <div style="margin-bottom: 25px; text-align: center; overflow: hidden; border-radius: 12px;">
-        <img src="${urlGambarFinal}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
+        <img src="${safeUrlForHtml}" alt="${judulFinal.replace(/"/g, '&quot;')}" loading="lazy" style="max-width: 100%; height: auto; display: block; margin: 0 auto; object-fit: cover;" />
       </div>
     `;
     const kontenHTMLFinal = bannerHTML + kontenHTMLRaw;
@@ -353,7 +391,7 @@ async function buatDanPostArtikelOtomatis() {
     });
 
     const postUrl = response.data.url;
-    botState.logTerakhir = `🎉 [SUKSES - GAMBAR VALID] Judul: ${judulFinal}`;
+    botState.logTerakhir = `🎉 [SUKSES VIRAL & RINGAN] Judul: ${judulFinal}`;
 
     const riwayatLokal = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf-8"));
     riwayatLokal.push({
