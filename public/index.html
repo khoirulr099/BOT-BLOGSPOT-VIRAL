@@ -49,6 +49,61 @@
     
     <div class="lg:col-span-2 space-y-6">
       
+      <!-- BLOGS CONTROLLER AND REGISTRY -->
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <h2 class="text-lg font-bold mb-4 text-gray-200 flex items-center gap-2">🌐 Blogger Blogs & Scheduler Status</h2>
+        <div id="blogsContainer" class="space-y-4">
+          <div class="text-gray-500 text-xs italic">Memuat data blog...</div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
+        <h2 class="text-lg font-bold mb-4 text-gray-200 flex items-center gap-2">➕ Register / Edit Blogger Blog</h2>
+        <form id="blogForm" onsubmit="saveBlog(event)" class="space-y-4 text-xs">
+          <input type="hidden" id="bId" value="">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Blog Display Name (Alias)</label>
+              <input type="text" id="bName" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="Contoh: Blog Utama / Niche Kuliner">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Blogger Blog ID</label>
+              <input type="text" id="bBlogId" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="Contoh: 887259163...">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Google Client ID</label>
+              <input type="text" id="bClientId" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="clientId dari GCP">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Google Client Secret</label>
+              <input type="password" id="bClientSecret" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="clientSecret dari GCP">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Google Refresh Token</label>
+              <input type="password" id="bRefreshToken" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="Google Refresh Token">
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">Post Schedule Interval (Hours)</label>
+              <input type="number" step="0.01" min="0.01" id="bInterval" required class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500" placeholder="Contoh: 3 (tiap 3 jam)">
+            </div>
+            <div>
+              <label class="block text-gray-400 mb-1 font-semibold">AI API Profile to Use</label>
+              <select id="bProfileSelect" class="w-full bg-gray-950 border border-gray-800 rounded-lg p-2.5 focus:outline-none focus:border-cyan-500 text-gray-300">
+                <option value="default">Default (.env API Key)</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button type="submit" id="blogSubmitBtn" class="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 p-3 rounded-xl font-bold shadow-md transition cursor-pointer text-xs uppercase tracking-wider">REGISTER BLOG</button>
+            <button type="button" id="blogCancelBtn" onclick="cancelBlogEdit()" class="hidden bg-gray-800 hover:bg-gray-700 px-5 py-3 rounded-xl font-bold transition cursor-pointer text-xs">CANCEL</button>
+          </div>
+        </form>
+      </div>
+
       <div class="bg-gray-900 p-6 rounded-2xl border border-gray-800">
         <h2 class="text-lg font-bold mb-4 text-gray-200 flex items-center gap-2">🔑 Create New API Vault Profile</h2>
         <form id="profileForm" onsubmit="createNewProfile(event)" class="space-y-4 text-xs">
@@ -104,9 +159,6 @@
         Menghubungkan ke core engine...
       </div>
     </div>
-
-  </div>
-
   <script>
     async function refreshTelemetry() {
       const res = await fetch("/api/status");
@@ -125,6 +177,9 @@
       document.getElementById("uiRam").innerText = data.systemMemory;
       document.getElementById("uiUptime").innerText = data.systemUptime;
       document.getElementById("terminalLog").innerText = data.logTerakhir;
+
+      // Automatically refresh the blog list as well so logs stay updated
+      loadBloggerBlogs(true);
     }
 
     async function loadVaultProfiles() {
@@ -132,6 +187,13 @@
       const profiles = await res.json();
       const container = document.getElementById("profilesContainer");
       
+      // Update the select dropdown in the blog form
+      const profileSelect = document.getElementById("bProfileSelect");
+      const currentVal = profileSelect.value;
+      profileSelect.innerHTML = `<option value="default">Default (.env API Key)</option>` + 
+        profiles.map(p => `<option value="${p.id}">${p.profileName}</option>`).join('');
+      profileSelect.value = currentVal || "default";
+
       if(profiles.length === 0) {
         container.innerHTML = `<div class="text-gray-500 text-xs italic col-span-2">Brankas kosong. Buat profil pertama kamu di atas.</div>`;
         return;
@@ -150,6 +212,208 @@
           <button onclick="activateProfile('${p.id}')" class="w-full mt-4 bg-gray-900 hover:bg-cyan-950 border border-gray-800 hover:border-cyan-800 text-[11px] font-bold py-1.5 px-3 rounded-lg text-cyan-400 transition cursor-pointer">ACTIVATE PROFILE</button>
         </div>
       `).join('');
+    }
+
+    async function loadBloggerBlogs(isBackgroundRefresh = false) {
+      try {
+        const res = await fetch("/api/blogs");
+        const blogs = await res.json();
+        const container = document.getElementById("blogsContainer");
+        
+        if (blogs.length === 0) {
+          container.innerHTML = `<div class="text-gray-500 text-xs italic">Belum ada blog yang didaftarkan. Gunakan form di bawah untuk menambah blog.</div>`;
+          return;
+        }
+
+        const profRes = await fetch("/api/profiles");
+        const profiles = await profRes.json();
+
+        container.innerHTML = blogs.map(b => {
+          const activeProfile = b.profileId === "default" 
+            ? "Default (.env)" 
+            : (profiles.find(p => p.id === b.profileId)?.profileName || "Unknown Profile");
+
+          const statusColor = b.isRunning ? "text-emerald-400" : "text-rose-500";
+          const statusBg = b.isRunning ? "bg-emerald-950 border-emerald-800/50" : "bg-rose-950 border-rose-800/50";
+          const statusPulse = b.isRunning ? "animate-pulse" : "";
+          const playStopLabel = b.isRunning ? "⏹️ STOP" : "▶️ START";
+          const playStopColor = b.isRunning ? "bg-rose-700 hover:bg-rose-600 text-white" : "bg-emerald-700 hover:bg-emerald-600 text-white";
+          const playStopAction = b.isRunning ? "stop" : "start";
+
+          const labelBadges = b.detectedLabels && b.detectedLabels.length > 0
+            ? b.detectedLabels.map(l => `<span class="bg-cyan-950 border border-cyan-800/50 text-cyan-400 text-[10px] px-2.5 py-0.5 rounded-full font-medium">${l}</span>`).join(' ')
+            : `<span class="text-gray-500 italic text-[10px]">Belum dipindai (klik Pindai Ulang)</span>`;
+
+          return `
+            <div class="bg-gray-950 p-5 rounded-xl border border-gray-800 hover:border-gray-700 transition duration-300">
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-900 pb-3 mb-3">
+                <div>
+                  <h3 class="font-bold text-sm text-gray-100 flex items-center gap-2">
+                    ${b.blogName}
+                    <span class="text-[10px] text-gray-500 font-normal font-mono">ID: ${b.blogId}</span>
+                  </h3>
+                  <div class="flex flex-wrap gap-2 mt-1">
+                    <span class="bg-gray-900 text-[9px] text-gray-400 px-2 py-0.5 rounded border border-gray-800">⏱️ Tiap ${b.intervalHours} Jam</span>
+                    <span class="bg-gray-900 text-[9px] text-gray-400 px-2 py-0.5 rounded border border-gray-800">🔑 Profile: ${activeProfile}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="${statusBg} border ${statusColor} ${statusPulse} text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                    ${b.isRunning ? 'Active Schedule' : 'Stopped'}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="space-y-2 text-[11px] mb-4">
+                <div>
+                  <span class="text-gray-500 font-bold block mb-1">🏷️ Kategori / Label Terdeteksi:</span>
+                  <div class="flex flex-wrap gap-1.5">${labelBadges}</div>
+                </div>
+                <div class="mt-2 bg-gray-900/40 p-2.5 rounded border border-gray-900 flex justify-between items-center">
+                  <div>
+                    <span class="text-gray-500 font-bold">Posting Berikutnya:</span>
+                    <span class="text-indigo-300 ml-1 font-mono">${b.nextPostTime || 'Unscheduled'}</span>
+                  </div>
+                </div>
+                <div class="bg-gray-900/40 p-2.5 rounded border border-gray-900 font-mono text-[10px] text-emerald-400 max-h-16 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                  ${b.lastLog || 'Belum ada log aktivitas.'}
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-2">
+                <button onclick="toggleBlogControl('${b.id}', '${playStopAction}')" class="${playStopColor} px-4 py-2 rounded-lg text-xs font-bold transition cursor-pointer flex-1 sm:flex-none">${playStopLabel}</button>
+                <button onclick="triggerLabelDetection(event, '${b.id}')" class="bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer">Pindai Ulang Kategori</button>
+                <button onclick="editBlog('${b.id}')" class="bg-cyan-950 hover:bg-cyan-900 border border-cyan-800 text-cyan-400 px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer">Edit</button>
+                <button onclick="deleteBlog('${b.id}')" class="bg-rose-950 hover:bg-rose-900 border border-rose-900 text-rose-400 px-3 py-2 rounded-lg text-xs font-bold transition cursor-pointer">Hapus</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        console.error("Gagal memuat blog:", err.message);
+      }
+    }
+
+    async function saveBlog(e) {
+      e.preventDefault();
+      const id = document.getElementById("bId").value;
+      const body = {
+        blogName: document.getElementById("bName").value,
+        blogId: document.getElementById("bBlogId").value,
+        clientId: document.getElementById("bClientId").value,
+        clientSecret: document.getElementById("bClientSecret").value,
+        refreshToken: document.getElementById("bRefreshToken").value,
+        intervalHours: parseFloat(document.getElementById("bInterval").value),
+        profileId: document.getElementById("bProfileSelect").value
+      };
+
+      const url = id ? `/api/blogs/${id}` : '/api/blogs';
+      const method = id ? 'PUT' : 'POST';
+
+      const submitBtn = document.getElementById("blogSubmitBtn");
+      const originalText = submitBtn.innerText;
+      submitBtn.disabled = true;
+      submitBtn.innerText = id ? "MENGUPDATE..." : "MENDAFTARKAN & MEMINDAI LABEL...";
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.error) {
+          alert("Gagal menyimpan blog: " + data.error);
+        } else {
+          cancelBlogEdit();
+          loadBloggerBlogs();
+          refreshTelemetry();
+        }
+      } catch (err) {
+        alert("Terjadi kesalahan: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      }
+    }
+
+    function editBlog(id) {
+      fetch("/api/blogs")
+        .then(res => res.json())
+        .then(blogs => {
+          const blog = blogs.find(b => b.id === id);
+          if (blog) {
+            document.getElementById("bId").value = blog.id;
+            document.getElementById("bName").value = blog.blogName;
+            document.getElementById("bBlogId").value = blog.blogId;
+            document.getElementById("bClientId").value = blog.clientId;
+            document.getElementById("bClientSecret").value = blog.clientSecret;
+            document.getElementById("bRefreshToken").value = blog.refreshToken;
+            document.getElementById("bInterval").value = blog.intervalHours;
+            document.getElementById("bProfileSelect").value = blog.profileId;
+
+            document.getElementById("blogSubmitBtn").innerText = "UPDATE BLOG";
+            document.getElementById("blogCancelBtn").classList.remove("hidden");
+            
+            document.getElementById("blogForm").scrollIntoView({ behavior: 'smooth' });
+          }
+        });
+    }
+
+    function cancelBlogEdit() {
+      document.getElementById("blogForm").reset();
+      document.getElementById("bId").value = "";
+      document.getElementById("blogSubmitBtn").innerText = "REGISTER BLOG";
+      document.getElementById("blogCancelBtn").classList.add("hidden");
+    }
+
+    async function deleteBlog(id) {
+      if (confirm("Apakah Anda yakin ingin menghapus blog ini? Semua scheduler aktif untuk blog ini akan dihentikan.")) {
+        await fetch(`/api/blogs/${id}`, {
+          method: "DELETE"
+        });
+        loadBloggerBlogs();
+        refreshTelemetry();
+      }
+    }
+
+    async function toggleBlogControl(id, action) {
+      await fetch(`/api/blogs/${id}/control`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ action })
+      });
+      loadBloggerBlogs();
+      refreshTelemetry();
+    }
+
+    async function triggerLabelDetection(evt, id) {
+      const btn = evt ? evt.target : null;
+      const originalText = btn ? btn.innerText : "Pindai Ulang Kategori";
+      if (btn) {
+        btn.innerText = "Memindai...";
+        btn.disabled = true;
+      }
+      
+      try {
+        const res = await fetch(`/api/blogs/${id}/detect-labels`, {
+          method: "POST"
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Sukses mendeteksi kategori: [${data.detectedLabels.join(', ')}]`);
+        } else {
+          alert("Gagal mendeteksi kategori: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        if (btn) {
+          btn.innerText = originalText;
+          btn.disabled = false;
+        }
+        loadBloggerBlogs();
+      }
     }
 
     // FITUR BARU: AMBIL DATA ANALITIK & GAMBAR CHART
@@ -230,11 +494,20 @@
     }
 
     async function triggerEngine(action) {
-      await fetch("/api/control", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ action })
-      });
+      // For backwards compatibility, it controls the default-blog
+      const blogsRes = await fetch("/api/blogs");
+      const blogs = await blogsRes.json();
+      const defaultBlog = blogs.find(b => b.id === "default-blog");
+      if (defaultBlog) {
+        await toggleBlogControl(defaultBlog.id, action);
+      } else {
+        // Fallback to control endpoint
+        await fetch("/api/control", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ action })
+        });
+      }
       refreshTelemetry();
     }
 
@@ -244,6 +517,7 @@
     window.onload = () => {
       refreshTelemetry();
       loadVaultProfiles();
+      loadBloggerBlogs();
       inisialisasiGrafikAnalitik(); // Pemicu grafik saat web dibuka
     };
   </script>
